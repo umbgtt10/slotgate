@@ -8,4 +8,5 @@ pub mod job_runner_filesystem_safety_tests;
 pub mod job_runner_tests;
 pub mod job_status_tests;
 pub mod job_tests;
+pub mod outcome_line_tests;
 pub mod slot_pool_tests;

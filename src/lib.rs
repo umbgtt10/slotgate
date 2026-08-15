@@ -15,6 +15,7 @@ pub use crate::execution::job;
 pub use crate::execution::job_outcome;
 pub use crate::execution::job_runner;
 pub use crate::execution::job_status;
+pub use crate::execution::outcome_line;
 pub use crate::execution::slot_guard;
 pub use crate::execution::slot_pool;
 pub use crate::ports::port_range;

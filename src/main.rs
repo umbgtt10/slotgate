@@ -7,6 +7,7 @@ use slotgate::gate_args::GateArgs;
 use slotgate::job_list_builder::JobListBuilder;
 use slotgate::job_runner::JobRunner;
 use slotgate::job_status::JobStatus;
+use slotgate::outcome_line::OutcomeLine;
 use slotgate::port_range_allocator::PortRangeAllocator;
 use slotgate::pre_build_runner::PreBuildRunner;
 use std::process::ExitCode;
@@ -76,16 +77,7 @@ async fn main() -> ExitCode {
 }
 
 fn print_outcome_as_it_completes(outcome: &slotgate::job_outcome::JobOutcome) {
-    let marker = match outcome.status {
-        JobStatus::Passed => "PASS",
-        JobStatus::Failed => "FAIL",
-        JobStatus::TimedOut => "TIMEOUT",
-    };
-    println!(
-        "  [{marker}] {} ({:.2}s)",
-        outcome.job_name,
-        outcome.duration.as_secs_f64()
-    );
+    println!("{}", OutcomeLine::render(outcome));
 }
 
 async fn resolve_pre_build(args: &GateArgs) -> Result<GateArgs, String> {
