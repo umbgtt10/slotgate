@@ -36,8 +36,10 @@ cargo install slotgate
   process receives its slot's range through two environment variables
   (`PORT_RANGE_BASE` and `PORT_RANGE_COUNT` by default) — the job binds ports
   from that window. Concurrently-running jobs therefore never share a port.
-- Each job has a per-job timeout and writes `stdout.log` / `stderr.log` under
-  `--log-dir`.
+- Each job has a per-job timeout and writes `stdout.log` / `stderr.log` to its
+  own subdirectory of `--log-dir`, named after the job. A failing or timing-out
+  job also prints the path to its `stdout.log`, so the captured output of the
+  jobs you care about is never something you have to go hunting for.
 - The process exits `0` only if every job passed; a failure or timeout exits
   non-zero.
 
@@ -87,6 +89,30 @@ let count: u16 = std::env::var("PORT_RANGE_COUNT").unwrap().parse().unwrap();
 
 The variable names are configurable with `--port-env-base` / `--port-env-count`.
 
+### Writing extra artifacts from a job
+
+Every job also receives two variables describing itself:
+
+| Variable | Value |
+|---|---|
+| `SLOTGATE_JOB_LOG_DIR` | This job's log directory — where its `stdout.log` and `stderr.log` are written |
+| `SLOTGATE_JOB_NAME` | The job name exactly as passed to `--jobs`, before filesystem sanitising |
+
+A job that produces artifacts of its own — per-node logs, captured configs,
+crash dumps — should write them under `SLOTGATE_JOB_LOG_DIR` so that everything
+belonging to one job stays together:
+
+```rust
+let job_dir = std::env::var("SLOTGATE_JOB_LOG_DIR")
+    .map(PathBuf::from)
+    .unwrap_or_else(|_| PathBuf::from("logs"));
+std::fs::create_dir_all(job_dir.join("node-3")).unwrap();
+```
+
+The alternative is for the job to rebuild that path from its own name, which
+means duplicating the sanitising rules above — two copies in two repositories
+that drift apart without anything failing loudly when they do.
+
 ### Pre-build discovery (optional)
 
 Building the test binary inside each job would cause build-lock contention. Run
@@ -107,6 +133,15 @@ slotgate \
 
 `--program` is still required by the CLI even when discovery overrides it — pass
 any placeholder.
+
+The same reasoning applies to anything a job shells out to at runtime. If the
+job itself invokes a build — to produce a helper binary it then executes, say —
+that build runs once per job and they contend. On Windows it does more than
+contend: if another job is already executing the binary being relinked, the
+build fails outright with `Access is denied (os error 5)`, because a running
+executable cannot be replaced. The job then fails for a reason that has nothing
+to do with what it was testing, only under parallelism, and never reproducibly.
+Build such artifacts once before the run and pass their paths to the jobs.
 
 ## License
 
