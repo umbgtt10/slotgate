@@ -12,6 +12,9 @@ use std::time::Duration;
 use std::time::Instant;
 use tokio::process::Command;
 
+const JOB_LOG_DIR_ENV_VAR: &str = "SLOTGATE_JOB_LOG_DIR";
+const JOB_NAME_ENV_VAR: &str = "SLOTGATE_JOB_NAME";
+
 pub struct JobRunner {
     port_env_base_var: String,
     port_env_count_var: String,
@@ -49,6 +52,8 @@ impl JobRunner {
             .args(&job.args)
             .env(&self.port_env_base_var, port_range.base.to_string())
             .env(&self.port_env_count_var, port_range.count.to_string())
+            .env(JOB_LOG_DIR_ENV_VAR, &job_dir)
+            .env(JOB_NAME_ENV_VAR, &job.name)
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(stderr_file));
 

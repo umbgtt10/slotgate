@@ -161,3 +161,67 @@ async fn run_enforces_a_timeout_and_reports_timed_out() {
         "timeout enforcement should return well before the job's own 30s sleep, took {elapsed:?}"
     );
 }
+
+#[tokio::test]
+async fn run_publishes_the_job_log_directory_to_the_child() {
+    // Arrange -- a test harness that writes its own artifacts needs to put
+    // them where this job's logs already are. Without this it has to
+    // re-derive the folder from the job name and duplicate the sanitiser,
+    // which silently drifts apart from this one.
+    let log_dir = temp_log_dir("publishes_job_log_dir");
+    let runner = JobRunner::new(
+        String::from("PORT_RANGE_BASE"),
+        String::from("PORT_RANGE_COUNT"),
+        Duration::from_secs(10),
+        log_dir.clone(),
+    );
+    let job = Job {
+        name: String::from("cluster::some_tests::a_case"),
+        program: String::from("cmd.exe"),
+        args: vec![
+            String::from("/C"),
+            String::from("echo %SLOTGATE_JOB_LOG_DIR%"),
+        ],
+    };
+    let port_range = PortRange {
+        base: 31700,
+        count: 10,
+    };
+
+    // Act
+    let outcome = runner.run(&job, &port_range).await;
+
+    // Assert
+    let printed = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
+    let expected = log_dir.join("cluster__some_tests__a_case");
+    assert_eq!(printed.trim(), expected.to_string_lossy());
+}
+
+#[tokio::test]
+async fn run_publishes_the_unsanitised_job_name_to_the_child() {
+    // Arrange -- the name is published as the runner received it, so a child
+    // can report the test path a reader would recognise rather than the
+    // filesystem-safe spelling.
+    let runner = JobRunner::new(
+        String::from("PORT_RANGE_BASE"),
+        String::from("PORT_RANGE_COUNT"),
+        Duration::from_secs(10),
+        temp_log_dir("publishes_job_name"),
+    );
+    let job = Job {
+        name: String::from("cluster::some_tests::a_case"),
+        program: String::from("cmd.exe"),
+        args: vec![String::from("/C"), String::from("echo %SLOTGATE_JOB_NAME%")],
+    };
+    let port_range = PortRange {
+        base: 31710,
+        count: 10,
+    };
+
+    // Act
+    let outcome = runner.run(&job, &port_range).await;
+
+    // Assert
+    let printed = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
+    assert_eq!(printed.trim(), "cluster::some_tests::a_case");
+}
