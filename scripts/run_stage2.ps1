@@ -85,8 +85,60 @@ function Invoke-Twin4RustGate {
     }
 }
 
+function Invoke-Iceberg4RustGate {
+    param(
+        [string]$Label,
+        [string[]]$Packages,
+        [string]$Threshold
+    )
+
+    Write-Host "$Label..." -ForegroundColor Cyan
+
+    if (-not (Get-Command cargo-iceberg4rust -ErrorAction SilentlyContinue)) {
+        Write-Host "`ncargo-iceberg4rust is not installed." -ForegroundColor Red
+        Write-Host "Install it with: cargo install cargo-iceberg4rust" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+
+    $manifestPath = (Resolve-Path (Join-Path $PSScriptRoot "..\Cargo.toml")).Path
+
+    # The ceiling is passed as a string rather than a [double] so it reaches the
+    # CLI unchanged. Interpolating a [double] formats it with the current culture,
+    # which emits a comma decimal separator on some locales and fails to parse.
+    $args = @("iceberg4rust", "--manifest-path", $manifestPath, "--threshold", $Threshold)
+    foreach ($package in $Packages) {
+        $args += @("--package", $package)
+    }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $output = & cargo @args 2>&1
+    $ErrorActionPreference = $previousErrorActionPreference
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+
+    # 2 is the tool's own "offenders found"; anything else non-zero means it
+    # could not run at all.
+    if ($exitCode -eq 2) {
+        Write-Host "`nFailed: $Label (file at or above the ceiling of $Threshold)" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+    if ($exitCode -ne 0) {
+        Write-Host "`nFailed: $Label (exit code $exitCode)" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+}
 Invoke-Crap4RustGate "CRAP slotgate" @("slotgate")
 Invoke-Twin4RustGate "Mirrored tests slotgate" @("slotgate")
+# ---------------------------------------------------------------------------
+# File risk gate
+# ---------------------------------------------------------------------------
+
+Invoke-Iceberg4RustGate "File risk slotgate" @("slotgate") -Threshold "2.6"
+
 
 Write-Host ""
 Write-Host "slotgate stage 2 passed!" -ForegroundColor Green
