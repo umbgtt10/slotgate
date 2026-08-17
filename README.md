@@ -26,6 +26,18 @@ non-overlapping ports, so they can all run at once.
 cargo install slotgate
 ```
 
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [docs/SLOT-ALLOCATION.md](docs/SLOT-ALLOCATION.md) | How a job gets a port range, and why concurrent jobs never share one |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How an invocation flows through the code |
+| [docs/ADRs/](docs/ADRs/README.md) | The load-bearing decisions and why they were forced |
+| [docs/IMPLEMENTED-FEATURES.md](docs/IMPLEMENTED-FEATURES.md) | What ships today |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What comes next |
+| [OPEN_POINTS.md](OPEN_POINTS.md) | Known gaps, deliberately deferred |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+
 ## How it works
 
 - You provide a `--program`, a list of `--jobs`, and `--program-args` containing
