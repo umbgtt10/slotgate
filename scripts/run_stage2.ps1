@@ -131,11 +131,10 @@ function Invoke-Iceberg4RustGate {
         exit 1
     }
 }
+
 Invoke-Crap4RustGate "CRAP slotgate" @("slotgate")
+
 Invoke-Twin4RustGate "Mirrored tests slotgate" @("slotgate")
-# ---------------------------------------------------------------------------
-# File risk gate
-# ---------------------------------------------------------------------------
 
 Invoke-Iceberg4RustGate "File risk slotgate" @("slotgate") -Threshold "2.6"
 
