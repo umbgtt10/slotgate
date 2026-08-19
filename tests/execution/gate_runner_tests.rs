@@ -1,8 +1,8 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::gate_args::GateArgs;
-use slotgate::gate_runner::GateRunner;
+use slotgate::config::gate_args::GateArgs;
+use slotgate::execution::gate_runner::GateRunner;
 use std::path::PathBuf;
 
 fn args_without_pre_build() -> GateArgs {
@@ -24,20 +24,23 @@ fn args_without_pre_build() -> GateArgs {
 }
 
 #[tokio::test]
-async fn resolve_pre_build_without_a_pre_build_program_returns_the_arguments_unchanged() {
-    // Arrange -- most invocations have no pre-build step. Rewriting program or
-    // program_args on that path would silently replace the command the caller
-    // asked for with libtest defaults it never mentioned.
-    let args = args_without_pre_build();
+async fn resolve_pre_build_reports_an_error_when_the_pre_build_program_cannot_run() {
+    // Arrange -- a pre-build step that cannot even start must abort the run.
+    // Falling through to the jobs would execute them against a binary the
+    // build never produced.
+    let mut args = args_without_pre_build();
+    args.pre_build_program = Some(String::from(
+        "slotgate-nonexistent-pre-build-program-for-tests",
+    ));
 
     // Act
-    let resolved = GateRunner::resolve_pre_build(&args)
-        .await
-        .expect("no pre-build program means nothing can fail");
+    let resolved = GateRunner::resolve_pre_build(&args).await;
 
     // Assert
-    assert_eq!(resolved.program, args.program);
-    assert_eq!(resolved.program_args, args.program_args);
+    assert!(
+        resolved.is_err(),
+        "a pre-build program that does not exist must surface as an error"
+    );
 }
 
 #[tokio::test]
@@ -64,21 +67,18 @@ async fn resolve_pre_build_without_a_pre_build_program_preserves_every_other_set
 }
 
 #[tokio::test]
-async fn resolve_pre_build_reports_an_error_when_the_pre_build_program_cannot_run() {
-    // Arrange -- a pre-build step that cannot even start must abort the run.
-    // Falling through to the jobs would execute them against a binary the
-    // build never produced.
-    let mut args = args_without_pre_build();
-    args.pre_build_program = Some(String::from(
-        "slotgate-nonexistent-pre-build-program-for-tests",
-    ));
+async fn resolve_pre_build_without_a_pre_build_program_returns_the_arguments_unchanged() {
+    // Arrange -- most invocations have no pre-build step. Rewriting program or
+    // program_args on that path would silently replace the command the caller
+    // asked for with libtest defaults it never mentioned.
+    let args = args_without_pre_build();
 
     // Act
-    let resolved = GateRunner::resolve_pre_build(&args).await;
+    let resolved = GateRunner::resolve_pre_build(&args)
+        .await
+        .expect("no pre-build program means nothing can fail");
 
     // Assert
-    assert!(
-        resolved.is_err(),
-        "a pre-build program that does not exist must surface as an error"
-    );
+    assert_eq!(resolved.program, args.program);
+    assert_eq!(resolved.program_args, args.program_args);
 }

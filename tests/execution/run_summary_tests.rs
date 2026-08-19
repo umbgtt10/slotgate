@@ -1,9 +1,9 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::job_outcome::JobOutcome;
-use slotgate::job_status::JobStatus;
-use slotgate::run_summary::RunSummary;
+use slotgate::execution::job_outcome::JobOutcome;
+use slotgate::execution::job_status::JobStatus;
+use slotgate::execution::run_summary::RunSummary;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Duration;
@@ -16,6 +16,28 @@ fn outcome(name: &str, status: JobStatus) -> JobOutcome {
         stdout_path: PathBuf::from("out.log"),
         stderr_path: PathBuf::from("err.log"),
     }
+}
+
+#[test]
+fn exit_code_is_success_only_when_the_run_succeeded() {
+    // Arrange -- this is the process exit code CI branches on.
+    let passed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Passed)]);
+    let failed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Failed)]);
+    let timed_out = RunSummary::from_outcomes(&[outcome("a", JobStatus::TimedOut)]);
+
+    // Act & Assert
+    assert_eq!(
+        format!("{:?}", passed.exit_code()),
+        format!("{:?}", ExitCode::SUCCESS)
+    );
+    assert_eq!(
+        format!("{:?}", failed.exit_code()),
+        format!("{:?}", ExitCode::FAILURE)
+    );
+    assert_eq!(
+        format!("{:?}", timed_out.exit_code()),
+        format!("{:?}", ExitCode::FAILURE)
+    );
 }
 
 #[test]
@@ -56,20 +78,13 @@ fn from_outcomes_of_an_empty_run_counts_nothing() {
 }
 
 #[test]
-fn total_accounts_for_every_outcome_handed_in() {
-    // Arrange -- total is printed as "(of N)". If it drifted from the number of
-    // jobs actually run, a silently dropped job would be invisible.
-    let outcomes = vec![
-        outcome("a", JobStatus::Passed),
-        outcome("b", JobStatus::Failed),
-        outcome("c", JobStatus::TimedOut),
-    ];
+fn is_success_for_an_empty_run_because_nothing_went_wrong() {
+    // Arrange -- vacuous success is deliberate: slotgate reports on the jobs it
+    // was given, and "you gave me none" is not slotgate's failure to report.
+    let summary = RunSummary::from_outcomes(&[]);
 
-    // Act
-    let summary = RunSummary::from_outcomes(&outcomes);
-
-    // Assert
-    assert_eq!(summary.total(), outcomes.len());
+    // Act & Assert
+    assert!(summary.is_success());
 }
 
 #[test]
@@ -96,38 +111,6 @@ fn is_success_only_when_nothing_failed_and_nothing_timed_out() {
 }
 
 #[test]
-fn is_success_for_an_empty_run_because_nothing_went_wrong() {
-    // Arrange -- vacuous success is deliberate: slotgate reports on the jobs it
-    // was given, and "you gave me none" is not slotgate's failure to report.
-    let summary = RunSummary::from_outcomes(&[]);
-
-    // Act & Assert
-    assert!(summary.is_success());
-}
-
-#[test]
-fn exit_code_is_success_only_when_the_run_succeeded() {
-    // Arrange -- this is the process exit code CI branches on.
-    let passed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Passed)]);
-    let failed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Failed)]);
-    let timed_out = RunSummary::from_outcomes(&[outcome("a", JobStatus::TimedOut)]);
-
-    // Act & Assert
-    assert_eq!(
-        format!("{:?}", passed.exit_code()),
-        format!("{:?}", ExitCode::SUCCESS)
-    );
-    assert_eq!(
-        format!("{:?}", failed.exit_code()),
-        format!("{:?}", ExitCode::FAILURE)
-    );
-    assert_eq!(
-        format!("{:?}", timed_out.exit_code()),
-        format!("{:?}", ExitCode::FAILURE)
-    );
-}
-
-#[test]
 fn render_reports_every_count_and_the_total() {
     // Arrange -- the rendered line is the artifact a human reads. Each number
     // has to appear, and the total has to match the parts.
@@ -146,4 +129,21 @@ fn render_reports_every_count_and_the_total() {
         rendered,
         "SLOTGATE — SUMMARY: 2 passed, 1 failed, 1 timed out (of 4)"
     );
+}
+
+#[test]
+fn total_accounts_for_every_outcome_handed_in() {
+    // Arrange -- total is printed as "(of N)". If it drifted from the number of
+    // jobs actually run, a silently dropped job would be invisible.
+    let outcomes = vec![
+        outcome("a", JobStatus::Passed),
+        outcome("b", JobStatus::Failed),
+        outcome("c", JobStatus::TimedOut),
+    ];
+
+    // Act
+    let summary = RunSummary::from_outcomes(&outcomes);
+
+    // Assert
+    assert_eq!(summary.total(), outcomes.len());
 }

@@ -1,8 +1,8 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use crate::gate_args::GateArgs;
-use crate::job::Job;
+use crate::config::gate_args::GateArgs;
+use crate::execution::job::Job;
 
 const JOB_PLACEHOLDER: &str = "{job}";
 

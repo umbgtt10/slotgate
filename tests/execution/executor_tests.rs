@@ -1,23 +1,17 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::executor::Executor;
-use slotgate::job::Job;
-use slotgate::job_runner::JobRunner;
-use slotgate::job_status::JobStatus;
-use slotgate::port_range_allocator::PortRangeAllocator;
+use slotgate::execution::executor::Executor;
+use slotgate::execution::job::Job;
+use slotgate::execution::job_runner::JobRunner;
+use slotgate::execution::job_status::JobStatus;
+use slotgate::ports::port_range_allocator::PortRangeAllocator;
 use std::collections::BTreeSet;
 use std::fs;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
-
-fn temp_log_dir(test_name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("slotgate_executor_tests_{test_name}"));
-    let _ = fs::remove_dir_all(&dir);
-    dir
-}
 
 fn new_executor(max_parallel: usize, log_dir: std::path::PathBuf) -> Executor {
     let port_allocator = PortRangeAllocator::new(32000, 50);
@@ -38,71 +32,10 @@ fn quick_job(name: &str, exit_code: u32) -> Job {
     }
 }
 
-#[tokio::test]
-async fn run_all_returns_one_outcome_per_job() {
-    // Arrange
-    let executor = new_executor(2, temp_log_dir("one_outcome_per_job"));
-    let jobs = vec![quick_job("a", 0), quick_job("b", 0), quick_job("c", 0)];
-
-    // Act
-    let outcomes = executor.run_all(jobs, |_| {}).await;
-
-    // Assert
-    assert_eq!(outcomes.len(), 3);
-}
-
-#[tokio::test]
-async fn run_all_reports_pass_and_fail_correctly_per_job() {
-    // Arrange
-    let executor = new_executor(2, temp_log_dir("pass_fail_per_job"));
-    let jobs = vec![quick_job("passes", 0), quick_job("fails", 1)];
-
-    // Act
-    let outcomes = executor.run_all(jobs, |_| {}).await;
-
-    // Assert
-    let passes = outcomes
-        .iter()
-        .find(|o| o.job_name == "passes")
-        .expect("missing outcome for 'passes'");
-    let fails = outcomes
-        .iter()
-        .find(|o| o.job_name == "fails")
-        .expect("missing outcome for 'fails'");
-    assert_eq!(passes.status, JobStatus::Passed);
-    assert_eq!(fails.status, JobStatus::Failed);
-}
-
-#[tokio::test]
-async fn run_all_bounds_wall_clock_time_by_max_parallel() {
-    // Arrange
-    let executor = new_executor(4, temp_log_dir("bounds_wall_clock"));
-    let sleepy_job = |name: &str| Job {
-        name: String::from(name),
-        program: String::from("powershell"),
-        args: vec![
-            String::from("-Command"),
-            String::from("Start-Sleep -Milliseconds 500"),
-        ],
-    };
-    let jobs = vec![
-        sleepy_job("j1"),
-        sleepy_job("j2"),
-        sleepy_job("j3"),
-        sleepy_job("j4"),
-    ];
-
-    // Act
-    let started = Instant::now();
-    let outcomes = executor.run_all(jobs, |_| {}).await;
-    let elapsed = started.elapsed();
-
-    // Assert
-    assert_eq!(outcomes.len(), 4);
-    assert!(
-        elapsed < Duration::from_secs(5),
-        "4 jobs at max_parallel=4 should overlap heavily, took {elapsed:?}"
-    );
+fn temp_log_dir(test_name: &str) -> std::path::PathBuf {
+    let dir = std::env::temp_dir().join(format!("slotgate_executor_tests_{test_name}"));
+    let _ = fs::remove_dir_all(&dir);
+    dir
 }
 
 #[tokio::test]
@@ -142,6 +75,38 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
             outcome.job_name
         );
     }
+}
+
+#[tokio::test]
+async fn run_all_bounds_wall_clock_time_by_max_parallel() {
+    // Arrange
+    let executor = new_executor(4, temp_log_dir("bounds_wall_clock"));
+    let sleepy_job = |name: &str| Job {
+        name: String::from(name),
+        program: String::from("powershell"),
+        args: vec![
+            String::from("-Command"),
+            String::from("Start-Sleep -Milliseconds 500"),
+        ],
+    };
+    let jobs = vec![
+        sleepy_job("j1"),
+        sleepy_job("j2"),
+        sleepy_job("j3"),
+        sleepy_job("j4"),
+    ];
+
+    // Act
+    let started = Instant::now();
+    let outcomes = executor.run_all(jobs, |_| {}).await;
+    let elapsed = started.elapsed();
+
+    // Assert
+    assert_eq!(outcomes.len(), 4);
+    assert!(
+        elapsed < Duration::from_secs(5),
+        "4 jobs at max_parallel=4 should overlap heavily, took {elapsed:?}"
+    );
 }
 
 #[tokio::test]
@@ -190,4 +155,39 @@ async fn run_all_invokes_the_callback_with_the_matching_status() {
     let seen = observed.lock().expect("observed lock poisoned");
     assert!(seen.contains(&(String::from("passes"), JobStatus::Passed)));
     assert!(seen.contains(&(String::from("fails"), JobStatus::Failed)));
+}
+
+#[tokio::test]
+async fn run_all_reports_pass_and_fail_correctly_per_job() {
+    // Arrange
+    let executor = new_executor(2, temp_log_dir("pass_fail_per_job"));
+    let jobs = vec![quick_job("passes", 0), quick_job("fails", 1)];
+
+    // Act
+    let outcomes = executor.run_all(jobs, |_| {}).await;
+
+    // Assert
+    let passes = outcomes
+        .iter()
+        .find(|o| o.job_name == "passes")
+        .expect("missing outcome for 'passes'");
+    let fails = outcomes
+        .iter()
+        .find(|o| o.job_name == "fails")
+        .expect("missing outcome for 'fails'");
+    assert_eq!(passes.status, JobStatus::Passed);
+    assert_eq!(fails.status, JobStatus::Failed);
+}
+
+#[tokio::test]
+async fn run_all_returns_one_outcome_per_job() {
+    // Arrange
+    let executor = new_executor(2, temp_log_dir("one_outcome_per_job"));
+    let jobs = vec![quick_job("a", 0), quick_job("b", 0), quick_job("c", 0)];
+
+    // Act
+    let outcomes = executor.run_all(jobs, |_| {}).await;
+
+    // Assert
+    assert_eq!(outcomes.len(), 3);
 }

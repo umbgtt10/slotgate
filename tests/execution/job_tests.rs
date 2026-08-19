@@ -1,7 +1,20 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::job::Job;
+use slotgate::execution::job::Job;
+
+#[test]
+fn job_accepts_empty_args() {
+    // Arrange & Act
+    let job = Job {
+        name: String::from("no_args_job"),
+        program: String::from("true"),
+        args: Vec::new(),
+    };
+
+    // Assert
+    assert!(job.args.is_empty());
+}
 
 #[test]
 fn job_holds_name_program_and_args() {
@@ -21,17 +34,4 @@ fn job_holds_name_program_and_args() {
     assert_eq!(job.name, name);
     assert_eq!(job.program, program);
     assert_eq!(job.args, args);
-}
-
-#[test]
-fn job_accepts_empty_args() {
-    // Arrange & Act
-    let job = Job {
-        name: String::from("no_args_job"),
-        program: String::from("true"),
-        args: Vec::new(),
-    };
-
-    // Assert
-    assert!(job.args.is_empty());
 }

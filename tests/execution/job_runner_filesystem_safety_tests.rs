@@ -1,10 +1,10 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::job::Job;
-use slotgate::job_runner::JobRunner;
-use slotgate::job_status::JobStatus;
-use slotgate::port_range::PortRange;
+use slotgate::execution::job::Job;
+use slotgate::execution::job_runner::JobRunner;
+use slotgate::execution::job_status::JobStatus;
+use slotgate::ports::port_range::PortRange;
 use std::fs;
 use std::time::Duration;
 

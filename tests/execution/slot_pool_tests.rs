@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::slot_pool::SlotPool;
+use slotgate::execution::slot_pool::SlotPool;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -18,37 +18,6 @@ async fn acquire_returns_a_slot_index_within_bounds() {
 
     // Assert
     assert!(guard.slot_index() < 4);
-}
-
-#[tokio::test]
-async fn two_concurrent_acquires_get_different_slots() {
-    // Arrange
-    let pool = SlotPool::new(4);
-
-    // Act
-    let first = pool.acquire().await;
-    let second = pool.acquire().await;
-
-    // Assert
-    assert_ne!(first.slot_index(), second.slot_index());
-}
-
-#[tokio::test]
-async fn slot_is_returned_to_the_pool_when_guard_drops() {
-    // Arrange
-    let pool = SlotPool::new(1);
-    let first_slot = {
-        let guard = pool.acquire().await;
-        guard.slot_index()
-    };
-
-    // Act
-    let second_guard = timeout(Duration::from_millis(500), pool.acquire())
-        .await
-        .expect("acquiring after release should not block");
-
-    // Assert
-    assert_eq!(second_guard.slot_index(), first_slot);
 }
 
 #[tokio::test]
@@ -101,4 +70,35 @@ async fn at_most_max_parallel_guards_are_held_simultaneously() {
 
     // Assert
     assert!(peak.load(Ordering::SeqCst) <= max_parallel);
+}
+
+#[tokio::test]
+async fn slot_is_returned_to_the_pool_when_guard_drops() {
+    // Arrange
+    let pool = SlotPool::new(1);
+    let first_slot = {
+        let guard = pool.acquire().await;
+        guard.slot_index()
+    };
+
+    // Act
+    let second_guard = timeout(Duration::from_millis(500), pool.acquire())
+        .await
+        .expect("acquiring after release should not block");
+
+    // Assert
+    assert_eq!(second_guard.slot_index(), first_slot);
+}
+
+#[tokio::test]
+async fn two_concurrent_acquires_get_different_slots() {
+    // Arrange
+    let pool = SlotPool::new(4);
+
+    // Act
+    let first = pool.acquire().await;
+    let second = pool.acquire().await;
+
+    // Assert
+    assert_ne!(first.slot_index(), second.slot_index());
 }

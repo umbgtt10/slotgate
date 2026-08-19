@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use crate::slot_pool::SlotPool;
+use crate::execution::slot_pool::SlotPool;
 use tokio::sync::SemaphorePermit;
 
 pub struct SlotGuard<'a> {

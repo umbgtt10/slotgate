@@ -1,18 +1,18 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::job_status::JobStatus;
-
-#[test]
-fn passed_equals_passed() {
-    // Arrange & Act & Assert
-    assert_eq!(JobStatus::Passed, JobStatus::Passed);
-}
+use slotgate::execution::job_status::JobStatus;
 
 #[test]
 fn passed_does_not_equal_failed() {
     // Arrange & Act & Assert
     assert_ne!(JobStatus::Passed, JobStatus::Failed);
+}
+
+#[test]
+fn passed_equals_passed() {
+    // Arrange & Act & Assert
+    assert_eq!(JobStatus::Passed, JobStatus::Passed);
 }
 
 #[test]

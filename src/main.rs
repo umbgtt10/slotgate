@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use clap::Parser;
-use slotgate::gate_args::GateArgs;
-use slotgate::gate_runner::GateRunner;
+use slotgate::config::gate_args::GateArgs;
+use slotgate::execution::gate_runner::GateRunner;
 use std::process::ExitCode;
 
 #[tokio::main]

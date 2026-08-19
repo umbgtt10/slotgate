@@ -1,24 +1,33 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::slot_pool::SlotPool;
+use slotgate::execution::slot_pool::SlotPool;
 use std::time::Duration;
 use tokio::time::timeout;
 
 #[tokio::test]
-async fn slot_index_reports_the_same_slot_on_every_call() {
-    // Arrange -- the index is read once to build the port range and again to
-    // label the log file. A guard that reported a different slot the second
-    // time would write one job's output under another job's ports.
-    let pool = SlotPool::new(4);
+async fn a_held_guard_keeps_its_slot_out_of_circulation() {
+    // Arrange -- the permit lives in the guard, so the slot must stay taken
+    // for the guard's whole lifetime. Releasing early would let two jobs bind
+    // the same port range, which is the collision slotgate exists to prevent.
+    let pool = SlotPool::new(1);
     let guard = pool.acquire().await;
 
     // Act
-    let first_read = guard.slot_index();
-    let second_read = guard.slot_index();
+    let while_held = timeout(Duration::from_millis(200), pool.acquire()).await;
 
     // Assert
-    assert_eq!(first_read, second_read);
+    assert!(
+        while_held.is_err(),
+        "the only slot is held, so a second acquire must block"
+    );
+    drop(guard);
+    assert!(
+        timeout(Duration::from_millis(500), pool.acquire())
+            .await
+            .is_ok(),
+        "the slot must become available once the guard drops"
+    );
 }
 
 #[tokio::test]
@@ -74,26 +83,17 @@ async fn guards_dropped_out_of_order_each_return_their_own_slot() {
 }
 
 #[tokio::test]
-async fn a_held_guard_keeps_its_slot_out_of_circulation() {
-    // Arrange -- the permit lives in the guard, so the slot must stay taken
-    // for the guard's whole lifetime. Releasing early would let two jobs bind
-    // the same port range, which is the collision slotgate exists to prevent.
-    let pool = SlotPool::new(1);
+async fn slot_index_reports_the_same_slot_on_every_call() {
+    // Arrange -- the index is read once to build the port range and again to
+    // label the log file. A guard that reported a different slot the second
+    // time would write one job's output under another job's ports.
+    let pool = SlotPool::new(4);
     let guard = pool.acquire().await;
 
     // Act
-    let while_held = timeout(Duration::from_millis(200), pool.acquire()).await;
+    let first_read = guard.slot_index();
+    let second_read = guard.slot_index();
 
     // Assert
-    assert!(
-        while_held.is_err(),
-        "the only slot is held, so a second acquire must block"
-    );
-    drop(guard);
-    assert!(
-        timeout(Duration::from_millis(500), pool.acquire())
-            .await
-            .is_ok(),
-        "the slot must become available once the guard drops"
-    );
+    assert_eq!(first_read, second_read);
 }

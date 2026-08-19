@@ -1,8 +1,8 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::job_outcome::JobOutcome;
-use slotgate::job_status::JobStatus;
+use slotgate::execution::job_outcome::JobOutcome;
+use slotgate::execution::job_status::JobStatus;
 use std::path::PathBuf;
 use std::time::Duration;
 

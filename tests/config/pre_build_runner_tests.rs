@@ -1,7 +1,33 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::pre_build_runner::PreBuildRunner;
+use slotgate::config::pre_build_runner::PreBuildRunner;
+
+#[tokio::test]
+async fn run_returns_an_error_when_the_command_exits_nonzero() {
+    // Arrange
+    let program = String::from("cmd.exe");
+    let args = vec![String::from("/C"), String::from("exit 1")];
+
+    // Act
+    let result = PreBuildRunner::run(&program, &args, None).await;
+
+    // Assert
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn run_returns_ok_none_when_output_has_no_matching_artifact() {
+    // Arrange
+    let program = String::from("cmd.exe");
+    let args = vec![String::from("/C"), String::from("echo not json at all")];
+
+    // Act
+    let result = PreBuildRunner::run(&program, &args, Some("all_tests")).await;
+
+    // Assert
+    assert_eq!(result, Ok(None));
+}
 
 #[tokio::test]
 async fn run_returns_the_discovered_executable_from_stdout() {
@@ -24,30 +50,4 @@ async fn run_returns_the_discovered_executable_from_stdout() {
         result,
         Ok(Some(String::from("C:\\target\\all_tests-abc.exe")))
     );
-}
-
-#[tokio::test]
-async fn run_returns_ok_none_when_output_has_no_matching_artifact() {
-    // Arrange
-    let program = String::from("cmd.exe");
-    let args = vec![String::from("/C"), String::from("echo not json at all")];
-
-    // Act
-    let result = PreBuildRunner::run(&program, &args, Some("all_tests")).await;
-
-    // Assert
-    assert_eq!(result, Ok(None));
-}
-
-#[tokio::test]
-async fn run_returns_an_error_when_the_command_exits_nonzero() {
-    // Arrange
-    let program = String::from("cmd.exe");
-    let args = vec![String::from("/C"), String::from("exit 1")];
-
-    // Act
-    let result = PreBuildRunner::run(&program, &args, None).await;
-
-    // Assert
-    assert!(result.is_err());
 }

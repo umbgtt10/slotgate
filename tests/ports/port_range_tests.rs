@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::port_range::PortRange;
+use slotgate::ports::port_range::PortRange;
 
 #[test]
 fn end_is_the_last_port_in_the_range_not_the_one_past_it() {
@@ -15,6 +15,34 @@ fn end_is_the_last_port_in_the_range_not_the_one_past_it() {
 
     // Act & Assert
     assert_eq!(range.end(), 30099);
+}
+
+#[test]
+fn end_never_falls_below_base_across_the_whole_port_space() {
+    // Arrange -- the invariant every caller relies on, checked rather than
+    // assumed: a range's end is never before its start, whatever the inputs.
+    let cases = [
+        (0u16, 0u16),
+        (0, 1),
+        (0, u16::MAX),
+        (1, u16::MAX),
+        (30_000, 100),
+        (u16::MAX, 0),
+        (u16::MAX, 1),
+        (u16::MAX, u16::MAX),
+    ];
+
+    // Act & Assert
+    for (base, count) in cases {
+        let range = PortRange { base, count };
+        assert!(
+            range.end() >= range.base,
+            "end {} fell below base {} for count {}",
+            range.end(),
+            base,
+            count
+        );
+    }
 }
 
 #[test]
@@ -60,32 +88,4 @@ fn end_saturates_at_the_top_of_the_port_space_instead_of_wrapping() {
     // Assert
     assert_eq!(end, u16::MAX);
     assert!(end >= range.base);
-}
-
-#[test]
-fn end_never_falls_below_base_across_the_whole_port_space() {
-    // Arrange -- the invariant every caller relies on, checked rather than
-    // assumed: a range's end is never before its start, whatever the inputs.
-    let cases = [
-        (0u16, 0u16),
-        (0, 1),
-        (0, u16::MAX),
-        (1, u16::MAX),
-        (30_000, 100),
-        (u16::MAX, 0),
-        (u16::MAX, 1),
-        (u16::MAX, u16::MAX),
-    ];
-
-    // Act & Assert
-    for (base, count) in cases {
-        let range = PortRange { base, count };
-        assert!(
-            range.end() >= range.base,
-            "end {} fell below base {} for count {}",
-            range.end(),
-            base,
-            count
-        );
-    }
 }

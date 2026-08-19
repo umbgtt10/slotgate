@@ -1,11 +1,11 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use crate::job::Job;
-use crate::job_outcome::JobOutcome;
-use crate::job_runner::JobRunner;
-use crate::port_range_allocator::PortRangeAllocator;
-use crate::slot_pool::SlotPool;
+use crate::execution::job::Job;
+use crate::execution::job_outcome::JobOutcome;
+use crate::execution::job_runner::JobRunner;
+use crate::execution::slot_pool::SlotPool;
+use crate::ports::port_range_allocator::PortRangeAllocator;
 use std::sync::Arc;
 
 pub struct Executor {

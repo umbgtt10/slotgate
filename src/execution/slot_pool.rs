@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use crate::slot_guard::SlotGuard;
+use crate::execution::slot_guard::SlotGuard;
 use std::collections::VecDeque;
 use std::sync::Mutex;
 use tokio::sync::Semaphore;

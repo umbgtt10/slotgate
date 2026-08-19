@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use crate::compiler_artifact_parser::CompilerArtifactParser;
+use crate::config::compiler_artifact_parser::CompilerArtifactParser;
 use tokio::process::Command;
 
 pub struct PreBuildRunner;

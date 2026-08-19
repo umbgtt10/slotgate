@@ -1,9 +1,9 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::job_outcome::JobOutcome;
-use slotgate::job_status::JobStatus;
-use slotgate::outcome_line::OutcomeLine;
+use slotgate::execution::job_outcome::JobOutcome;
+use slotgate::execution::job_status::JobStatus;
+use slotgate::execution::outcome_line::OutcomeLine;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -35,19 +35,6 @@ fn render_a_failed_job_points_at_the_captured_stdout() {
 }
 
 #[test]
-fn render_a_timed_out_job_points_at_the_captured_stdout() {
-    // Arrange
-    let timed_out = outcome(JobStatus::TimedOut);
-
-    // Act
-    let rendered = OutcomeLine::render(&timed_out);
-
-    // Assert
-    assert!(rendered.contains("[TIMEOUT]"));
-    assert!(rendered.contains("stdout.log"));
-}
-
-#[test]
 fn render_a_passed_job_stays_on_one_line() {
     // Arrange
     let passed = outcome(JobStatus::Passed);
@@ -58,6 +45,19 @@ fn render_a_passed_job_stays_on_one_line() {
     // Assert
     assert!(!rendered.contains('\n'));
     assert!(!rendered.contains("stdout.log"));
+}
+
+#[test]
+fn render_a_timed_out_job_points_at_the_captured_stdout() {
+    // Arrange
+    let timed_out = outcome(JobStatus::TimedOut);
+
+    // Act
+    let rendered = OutcomeLine::render(&timed_out);
+
+    // Assert
+    assert!(rendered.contains("[TIMEOUT]"));
+    assert!(rendered.contains("stdout.log"));
 }
 
 #[test]

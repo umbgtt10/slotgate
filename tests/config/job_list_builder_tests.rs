@@ -1,8 +1,8 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::gate_args::GateArgs;
-use slotgate::job_list_builder::JobListBuilder;
+use slotgate::config::gate_args::GateArgs;
+use slotgate::config::job_list_builder::JobListBuilder;
 
 fn args(program_args: Vec<&str>, jobs: Vec<&str>) -> GateArgs {
     GateArgs {
@@ -47,6 +47,18 @@ fn each_job_uses_the_configured_program() {
 }
 
 #[test]
+fn job_name_is_preserved_on_the_built_job() {
+    // Arrange
+    let args = args(vec!["test", "{job}"], vec!["scenario_b"]);
+
+    // Act
+    let jobs = JobListBuilder::build(&args);
+
+    // Assert
+    assert_eq!(jobs[0].name, "scenario_b");
+}
+
+#[test]
 fn job_placeholder_is_substituted_with_the_job_name() {
     // Arrange
     let args = args(
@@ -62,18 +74,6 @@ fn job_placeholder_is_substituted_with_the_job_name() {
         jobs[0].args,
         vec!["test", "--test", "all_tests", "scenario_a"]
     );
-}
-
-#[test]
-fn job_name_is_preserved_on_the_built_job() {
-    // Arrange
-    let args = args(vec!["test", "{job}"], vec!["scenario_b"]);
-
-    // Act
-    let jobs = JobListBuilder::build(&args);
-
-    // Assert
-    assert_eq!(jobs[0].name, "scenario_b");
 }
 
 #[test]

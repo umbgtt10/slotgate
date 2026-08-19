@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use crate::port_range::PortRange;
+use crate::ports::port_range::PortRange;
 
 pub struct PortRangeAllocator {
     base_port: u16,

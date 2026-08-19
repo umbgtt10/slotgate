@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Umberto Gotti
 // SPDX-License-Identifier: MIT
 
-use slotgate::compiler_artifact_parser::CompilerArtifactParser;
+use slotgate::config::compiler_artifact_parser::CompilerArtifactParser;
 
 fn artifact_line(target_name: &str, is_test_profile: bool, executable: Option<&str>) -> String {
     let executable_json = match executable {
@@ -14,24 +14,29 @@ fn artifact_line(target_name: &str, is_test_profile: bool, executable: Option<&s
 }
 
 #[test]
-fn finds_the_executable_for_a_single_matching_test_artifact() {
+fn filters_by_target_name_when_multiple_test_artifacts_exist() {
     // Arrange
-    let output = artifact_line("all_tests", true, Some("C:\\target\\all_tests-abc.exe"));
+    let output = format!(
+        "{}\n{}",
+        artifact_line(
+            "system_tests",
+            true,
+            Some("C:\\target\\system_tests-aaa.exe")
+        ),
+        artifact_line("all_tests", true, Some("C:\\target\\all_tests-bbb.exe"))
+    );
 
     // Act
     let found = CompilerArtifactParser::find_executable(&output, Some("all_tests"));
 
     // Assert
-    assert_eq!(found, Some(String::from("C:\\target\\all_tests-abc.exe")));
+    assert_eq!(found, Some(String::from("C:\\target\\all_tests-bbb.exe")));
 }
 
 #[test]
-fn ignores_non_compiler_artifact_lines() {
+fn finds_the_executable_for_a_single_matching_test_artifact() {
     // Arrange
-    let output = format!(
-        "{{\"reason\":\"build-finished\",\"success\":true}}\n{}",
-        artifact_line("all_tests", true, Some("C:\\target\\all_tests-abc.exe"))
-    );
+    let output = artifact_line("all_tests", true, Some("C:\\target\\all_tests-abc.exe"));
 
     // Act
     let found = CompilerArtifactParser::find_executable(&output, Some("all_tests"));
@@ -57,43 +62,33 @@ fn ignores_artifacts_with_a_null_executable() {
 }
 
 #[test]
-fn filters_by_target_name_when_multiple_test_artifacts_exist() {
+fn ignores_malformed_json_lines_without_failing() {
     // Arrange
     let output = format!(
-        "{}\n{}",
-        artifact_line(
-            "system_tests",
-            true,
-            Some("C:\\target\\system_tests-aaa.exe")
-        ),
-        artifact_line("all_tests", true, Some("C:\\target\\all_tests-bbb.exe"))
+        "not valid json\n{}",
+        artifact_line("all_tests", true, Some("C:\\target\\all_tests-abc.exe"))
     );
 
     // Act
     let found = CompilerArtifactParser::find_executable(&output, Some("all_tests"));
 
     // Assert
-    assert_eq!(found, Some(String::from("C:\\target\\all_tests-bbb.exe")));
+    assert_eq!(found, Some(String::from("C:\\target\\all_tests-abc.exe")));
 }
 
 #[test]
-fn without_a_target_name_filter_returns_the_last_test_profile_executable() {
+fn ignores_non_compiler_artifact_lines() {
     // Arrange
     let output = format!(
-        "{}\n{}",
-        artifact_line(
-            "system_tests",
-            true,
-            Some("C:\\target\\system_tests-aaa.exe")
-        ),
-        artifact_line("all_tests", true, Some("C:\\target\\all_tests-bbb.exe"))
+        "{{\"reason\":\"build-finished\",\"success\":true}}\n{}",
+        artifact_line("all_tests", true, Some("C:\\target\\all_tests-abc.exe"))
     );
 
     // Act
-    let found = CompilerArtifactParser::find_executable(&output, None);
+    let found = CompilerArtifactParser::find_executable(&output, Some("all_tests"));
 
     // Assert
-    assert_eq!(found, Some(String::from("C:\\target\\all_tests-bbb.exe")));
+    assert_eq!(found, Some(String::from("C:\\target\\all_tests-abc.exe")));
 }
 
 #[test]
@@ -121,16 +116,21 @@ fn returns_none_when_nothing_matches() {
 }
 
 #[test]
-fn ignores_malformed_json_lines_without_failing() {
+fn without_a_target_name_filter_returns_the_last_test_profile_executable() {
     // Arrange
     let output = format!(
-        "not valid json\n{}",
-        artifact_line("all_tests", true, Some("C:\\target\\all_tests-abc.exe"))
+        "{}\n{}",
+        artifact_line(
+            "system_tests",
+            true,
+            Some("C:\\target\\system_tests-aaa.exe")
+        ),
+        artifact_line("all_tests", true, Some("C:\\target\\all_tests-bbb.exe"))
     );
 
     // Act
-    let found = CompilerArtifactParser::find_executable(&output, Some("all_tests"));
+    let found = CompilerArtifactParser::find_executable(&output, None);
 
     // Assert
-    assert_eq!(found, Some(String::from("C:\\target\\all_tests-abc.exe")));
+    assert_eq!(found, Some(String::from("C:\\target\\all_tests-bbb.exe")));
 }
