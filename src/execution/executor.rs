@@ -7,6 +7,7 @@ use crate::execution::job_runner::JobRunner;
 use crate::execution::slot_pool::SlotPool;
 use crate::ports::port_range_allocator::PortRangeAllocator;
 use std::sync::Arc;
+use tokio::spawn;
 
 pub struct Executor {
     slot_pool: Arc<SlotPool>,
@@ -38,7 +39,7 @@ impl Executor {
             let port_allocator = Arc::clone(&self.port_allocator);
             let job_runner = Arc::clone(&self.job_runner);
             let on_outcome = Arc::clone(&on_outcome);
-            handles.push(tokio::spawn(async move {
+            handles.push(spawn(async move {
                 let guard = slot_pool.acquire().await;
                 let port_range = port_allocator.range_for_slot(guard.slot_index());
                 let outcome = job_runner.run(&job, &port_range).await;

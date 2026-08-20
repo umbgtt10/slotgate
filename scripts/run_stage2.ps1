@@ -175,6 +175,10 @@ function Invoke-Iceberg4RustGate {
 # stern4rust runs first: its corrections are renames, file moves and directory
 # splits, so a layout it is about to reject is a layout the other three would
 # have measured for nothing. Its findings are also the cheapest to act on.
+#
+# Every rule it has is enforced, with nothing skipped. The header rule is the
+# one exception and reports itself as not applied: it needs --header-file, and
+# this repository has no header file to point it at.
 Invoke-Stern4RustGate "House rules slotgate" @("slotgate")
 
 Invoke-Crap4RustGate "CRAP slotgate" @("slotgate")

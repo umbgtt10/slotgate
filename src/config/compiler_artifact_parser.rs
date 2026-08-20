@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use serde_json::Value;
+use serde_json::from_str;
 
 pub struct CompilerArtifactParser;
 
@@ -12,7 +13,7 @@ impl CompilerArtifactParser {
     ) -> Option<String> {
         cargo_json_lines_output
             .lines()
-            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+            .filter_map(|line| from_str::<Value>(line).ok())
             .filter(|value| {
                 value.get("reason").and_then(Value::as_str) == Some("compiler-artifact")
             })

@@ -7,6 +7,7 @@ use slotgate::execution::job_runner::JobRunner;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::ports::port_range_allocator::PortRangeAllocator;
 use std::collections::BTreeSet;
+use std::env::temp_dir;
 use std::fs;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -33,7 +34,7 @@ fn quick_job(name: &str, exit_code: u32) -> Job {
 }
 
 fn temp_log_dir(test_name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("slotgate_executor_tests_{test_name}"));
+    let dir = temp_dir().join(format!("slotgate_executor_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
     dir
 }

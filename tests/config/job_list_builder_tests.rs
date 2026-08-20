@@ -3,6 +3,7 @@
 
 use slotgate::config::gate_args::GateArgs;
 use slotgate::config::job_list_builder::JobListBuilder;
+use std::path::PathBuf;
 
 fn args(program_args: Vec<&str>, jobs: Vec<&str>) -> GateArgs {
     GateArgs {
@@ -12,7 +13,7 @@ fn args(program_args: Vec<&str>, jobs: Vec<&str>) -> GateArgs {
         port_env_base: String::from("PORT_RANGE_BASE"),
         port_env_count: String::from("PORT_RANGE_COUNT"),
         timeout_secs: 120,
-        log_dir: std::path::PathBuf::from("logs/slotgate"),
+        log_dir: PathBuf::from("logs/slotgate"),
         program: String::from("cargo"),
         program_args: program_args.into_iter().map(String::from).collect(),
         jobs: jobs.into_iter().map(String::from).collect(),

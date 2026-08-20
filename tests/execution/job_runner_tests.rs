@@ -5,11 +5,13 @@ use slotgate::execution::job::Job;
 use slotgate::execution::job_runner::JobRunner;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::ports::port_range::PortRange;
+use std::env::temp_dir;
 use std::fs;
 use std::time::Duration;
+use std::time::Instant;
 
 fn temp_log_dir(test_name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("slotgate_job_runner_tests_{test_name}"));
+    let dir = temp_dir().join(format!("slotgate_job_runner_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
     dir
 }
@@ -66,6 +68,37 @@ async fn run_a_command_that_exits_zero_reports_passed() {
     assert_eq!(outcome.status, JobStatus::Passed);
 }
 
+// A job name carrying `::` is not a filename. The runner has to sanitise it for
+// the log path while still handing the child the name somebody wrote.
+#[tokio::test]
+async fn run_a_job_whose_name_contains_double_colons_still_runs_successfully() {
+    // Arrange
+    let runner = JobRunner::new(
+        String::from("PORT_RANGE_BASE"),
+        String::from("PORT_RANGE_COUNT"),
+        Duration::from_secs(10),
+        temp_log_dir("filesystem_safety"),
+    );
+    let job = Job {
+        name: String::from(
+            "cluster::byzantine_tests::byzantine_new_view_from_non_proposer_is_rejected",
+        ),
+        program: String::from("cmd.exe"),
+        args: vec![String::from("/C"), String::from("exit 0")],
+    };
+    let port_range = PortRange {
+        base: 33000,
+        count: 10,
+    };
+
+    // Act
+    let outcome = runner.run(&job, &port_range).await;
+
+    // Assert
+    assert_eq!(outcome.status, JobStatus::Passed);
+    assert!(outcome.stdout_path.exists());
+}
+
 #[tokio::test]
 async fn run_captures_stdout_to_the_returned_path() {
     // Arrange
@@ -119,7 +152,7 @@ async fn run_enforces_a_timeout_and_reports_timed_out() {
     };
 
     // Act
-    let started = std::time::Instant::now();
+    let started = Instant::now();
     let outcome = runner.run(&job, &port_range).await;
     let elapsed = started.elapsed();
 

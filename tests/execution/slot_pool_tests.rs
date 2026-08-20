@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use tokio::spawn;
+use tokio::time::sleep;
 use tokio::time::timeout;
 
 #[tokio::test]
@@ -56,11 +58,11 @@ async fn at_most_max_parallel_guards_are_held_simultaneously() {
         let pool = Arc::clone(&pool);
         let current = Arc::clone(&current);
         let peak = Arc::clone(&peak);
-        handles.push(tokio::spawn(async move {
+        handles.push(spawn(async move {
             let _guard = pool.acquire().await;
             let now = current.fetch_add(1, Ordering::SeqCst) + 1;
             peak.fetch_max(now, Ordering::SeqCst);
-            tokio::time::sleep(Duration::from_millis(20)).await;
+            sleep(Duration::from_millis(20)).await;
             current.fetch_sub(1, Ordering::SeqCst);
         }));
     }

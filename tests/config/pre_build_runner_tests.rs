@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use slotgate::config::pre_build_runner::PreBuildRunner;
+use std::env::temp_dir;
+use std::fs;
 
 #[tokio::test]
 async fn run_returns_an_error_when_the_command_exits_nonzero() {
@@ -33,8 +35,8 @@ async fn run_returns_ok_none_when_output_has_no_matching_artifact() {
 async fn run_returns_the_discovered_executable_from_stdout() {
     // Arrange
     let json = "{\"reason\":\"compiler-artifact\",\"target\":{\"name\":\"all_tests\"},\"profile\":{\"test\":true},\"executable\":\"C:\\\\target\\\\all_tests-abc.exe\"}";
-    let fixture_path = std::env::temp_dir().join("slotgate_pre_build_runner_fixture.json");
-    std::fs::write(&fixture_path, json).expect("failed to write fixture file");
+    let fixture_path = temp_dir().join("slotgate_pre_build_runner_fixture.json");
+    fs::write(&fixture_path, json).expect("failed to write fixture file");
     let program = String::from("cmd.exe");
     let args = vec![
         String::from("/C"),
