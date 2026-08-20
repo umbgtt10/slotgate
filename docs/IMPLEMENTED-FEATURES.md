@@ -4,6 +4,21 @@ This document describes the feature set currently shipped by `slotgate`. For
 the mechanism behind it see [SLOT-ALLOCATION.md](SLOT-ALLOCATION.md); for
 released versions see [CHANGELOG.md](../CHANGELOG.md).
 
+## Version 0.3.0
+
+### Quality gates
+
+- Stage 2 runs four installed cargo subcommands: `stern4rust` (house coding
+  rules), `crap4rust` (complexity against coverage), `twin4rust` (mirrored test
+  files) and `iceberg4rust` (private implementation risk) -- in that order,
+  because stern4rust's corrections change what the other three measure.
+- All twenty applicable stern4rust rules are enforced, nothing skipped.
+
+### Library paths
+
+- Every symbol is imported by the path it is defined at. The seventeen
+  `pub use` re-exports in `src/lib.rs` are gone.
+
 ## Version 0.2.0
 
 ### Slot and port allocation

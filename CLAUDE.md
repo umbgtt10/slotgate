@@ -38,11 +38,28 @@ Run gates:
 
 If either gate is not green, the work is not complete.
 
-Stage 1 is formatting, clippy and tests. Stage 2 is `cargo crap4rust` and
-`cargo twin4rust`, both of which must be installed:
+Stage 1 is formatting, clippy and tests -- cargo built-ins only, so it works on
+a fresh checkout. Stage 2 is four installed cargo subcommands, run in this
+order:
 
+| gate | asks |
+|---|---|
+| `cargo stern4rust` | do the house coding rules hold |
+| `cargo crap4rust` | is any function complex and untested |
+| `cargo twin4rust` | does every source file have a mirrored test file |
+| `cargo iceberg4rust` | is any file's private implementation risk too high |
+
+stern4rust runs **first** because its corrections are renames, file moves and
+directory splits: a layout it is about to reject is a layout the other three
+would have measured for nothing. Its findings are also the cheapest to act on.
+
+Every rule it has is enforced, with nothing skipped. `header` reports itself as
+not applied, because this repository has no header file to point it at.
+
+`cargo install cargo-stern4rust`
 `cargo install cargo-crap4rust`
 `cargo install cargo-twin4rust`
+`cargo install cargo-iceberg4rust`
 
 ## Structure
 

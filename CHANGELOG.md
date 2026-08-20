@@ -5,6 +5,47 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-20
+
+### Changed
+
+- **Breaking: seventeen re-exports are gone from `src/lib.rs`.**
+  `slotgate::job::Job` is now `slotgate::execution::job::Job`, and the same for
+  every other module -- the path a symbol is imported by is now the path it is
+  defined at.
+
+  The shim made every import a half-truth: `slotgate::job::Job` resolved to
+  something living at `slotgate::execution::job::Job`, so a reader could not
+  find a type from the path that reached it. Nothing enforced the standard
+  against it until `stern4rust`'s `module-registry` rule found it on the first
+  run.
+
+- **Stage 2 gates on house coding rules, first of four.** `cargo stern4rust`
+  runs ahead of `crap4rust`, `twin4rust` and `iceberg4rust`, because its
+  corrections are renames, file moves and directory splits -- a layout it is
+  about to reject is a layout the other three would have measured for nothing.
+
+  All twenty of its applicable rules are enforced with nothing skipped. The
+  twenty-first, `header`, reports itself as not applied: this repository has no
+  header file to point it at.
+
+### Added
+
+- **`GateRunner::run` is covered end to end.** Every test stopped at
+  `resolve_pre_build`, leaving the one function the binary actually calls
+  untested. Two tests now drive the whole gate against a trivial child process:
+  all jobs passing returns success, and one failing job fails the run.
+
+### Fixed
+
+- Fifteen calls reached through a path no import named -- `serde_json::from_str`,
+  `tokio::spawn`, `tokio::time::timeout` and `sleep`, `std::fs::create_dir_all`,
+  `File::create` and `write`, `std::env::temp_dir`, `PathBuf::from`,
+  `Instant::now` -- are each imported and called by the name the file names.
+- `tests/execution/job_runner_filesystem_safety_tests.rs` was named for a source
+  file that does not exist. Its single test exercises `JobRunner` and now lives
+  in `job_runner_tests.rs`, beside the rest of that type's tests.
+
 ## [0.2.0] - 2026-08-15
 
 ### Added
