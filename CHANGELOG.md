@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **The header rule is configured, so all twenty-one rules now hold.**
+  `docs/header.txt` carries the two-line header every `.rs` file already had,
+  and `stern4rust.toml` names it -- in the config rather than the gate script,
+  so a hand-run of `cargo stern4rust` checks exactly what the gate checks.
+
+  Nothing skipped, nothing unconfigured. Verified non-vacuous: pointed at a
+  deliberately wrong header, the rule reports all 42 files.
+
 ## [0.3.0] - 2026-08-20
 
 ### Changed

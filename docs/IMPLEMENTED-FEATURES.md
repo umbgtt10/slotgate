@@ -4,6 +4,14 @@ This document describes the feature set currently shipped by `slotgate`. For
 the mechanism behind it see [SLOT-ALLOCATION.md](SLOT-ALLOCATION.md); for
 released versions see [CHANGELOG.md](../CHANGELOG.md).
 
+## Unreleased
+
+### Quality gates
+
+- All twenty-one stern4rust rules are enforced: nothing skipped, nothing
+  unconfigured. `docs/header.txt` holds the two-line header every `.rs` file
+  carries and `stern4rust.toml` names it.
+
 ## Version 0.3.0
 
 ### Quality gates

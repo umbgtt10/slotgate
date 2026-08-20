@@ -53,8 +53,10 @@ stern4rust runs **first** because its corrections are renames, file moves and
 directory splits: a layout it is about to reject is a layout the other three
 would have measured for nothing. Its findings are also the cheapest to act on.
 
-Every rule it has is enforced, with nothing skipped. `header` reports itself as
-not applied, because this repository has no header file to point it at.
+All twenty-one rules are enforced, with nothing skipped and nothing
+unconfigured. `docs/header.txt` holds the two-line header every `.rs` file
+carries, and `stern4rust.toml` names it -- in the config rather than the gate
+script, so a hand-run of `cargo stern4rust` checks exactly what the gate does.
 
 `cargo install cargo-stern4rust`
 `cargo install cargo-crap4rust`
