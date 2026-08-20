@@ -1,0 +1,17 @@
+# House coding rules, enforced by `cargo stern4rust` in stage 2.
+#
+# Eighteen of the twenty-one rules hold today and are enforced. The three below
+# are skipped while their findings are worked through -- a skipped rule is named
+# in every report, so this is an adoption step somebody can see rather than a
+# silence.
+#
+# Remove each line once its offences are fixed:
+#
+#   imported-paths     15 -- calls reached through a path rather than an import,
+#                            e.g. `serde_json::from_str`, `tokio::spawn`,
+#                            `std::fs::create_dir_all`, `env::temp_dir`
+#   tested-public-api   1 -- `GateRunner::run` is public and no test calls it
+#   paired-test-file    1 -- tests/execution/job_runner_filesystem_safety_tests.rs
+#                            names src/execution/job_runner_filesystem_safety.rs,
+#                            which does not exist
+skip = ["imported-paths", "tested-public-api", "paired-test-file"]

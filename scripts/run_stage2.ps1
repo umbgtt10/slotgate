@@ -3,6 +3,46 @@
 
 Set-Location (Split-Path -Parent $PSScriptRoot)
 
+function Invoke-Stern4RustGate {
+    param(
+        [string]$Name,
+        [string[]]$Packages
+    )
+
+    Write-Host ""
+    Write-Host "=== $Name ===" -ForegroundColor Cyan
+
+    if (-not (Get-Command cargo-stern4rust -ErrorAction SilentlyContinue)) {
+        Write-Host "cargo-stern4rust is not installed." -ForegroundColor Red
+        Write-Host "Install it with: cargo install cargo-stern4rust" -ForegroundColor Red
+        exit 1
+    }
+
+    $manifestPath = (Resolve-Path (Join-Path $PSScriptRoot "..\Cargo.toml")).Path
+    $args = @("stern4rust", "--manifest-path", $manifestPath)
+    foreach ($package in $Packages) {
+        $args += @("--package", $package)
+    }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $output = & cargo @args 2>&1
+    $ErrorActionPreference = $previousErrorActionPreference
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+
+    # 2 is a rule broken; 1 is the tool failing to run at all. Kept apart so a
+    # bad manifest cannot read as a clean codebase.
+    if ($exitCode -eq 2) {
+        Write-Host "FAILED: $Name (a house coding rule was broken)" -ForegroundColor Red
+        exit 1
+    }
+    if ($exitCode -ne 0) {
+        Write-Host "FAILED: $Name (could not run, exit $exitCode)" -ForegroundColor Red
+        exit 1
+    }
+}
+
 function Invoke-Crap4RustGate {
     param(
         [string]$Name,
@@ -131,6 +171,11 @@ function Invoke-Iceberg4RustGate {
         exit 1
     }
 }
+
+# stern4rust runs first: its corrections are renames, file moves and directory
+# splits, so a layout it is about to reject is a layout the other three would
+# have measured for nothing. Its findings are also the cheapest to act on.
+Invoke-Stern4RustGate "House rules slotgate" @("slotgate")
 
 Invoke-Crap4RustGate "CRAP slotgate" @("slotgate")
 
