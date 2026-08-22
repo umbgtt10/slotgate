@@ -37,8 +37,16 @@ pub struct GateArgs {
     #[arg(long, value_delimiter = ',', default_value = "")]
     pub program_args: Vec<String>,
 
-    #[arg(long, value_delimiter = ',')]
+    #[arg(long, value_delimiter = ',', default_value = "")]
     pub jobs: Vec<String>,
+
+    /// A file naming one job per line, instead of `--jobs`. Blank lines are
+    /// ignored and each name is trimmed. For suites large enough that the names
+    /// no longer fit on a command line: Windows caps one near 32 kB, and a
+    /// process that exceeds it fails to spawn with an error naming neither the
+    /// length nor the argument. Stating both this and `--jobs` is an error.
+    #[arg(long)]
+    pub jobs_file: Option<PathBuf>,
 
     /// Optional one-time setup command run before any job is scheduled, e.g. a build step.
     /// The whole run aborts if this command fails.

@@ -3,4 +3,6 @@
 
 pub mod compiler_artifact_parser_tests;
 pub mod job_list_builder_tests;
+pub mod job_source_tests;
+pub mod pre_build_resolver_tests;
 pub mod pre_build_runner_tests;

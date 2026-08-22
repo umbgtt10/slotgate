@@ -17,6 +17,7 @@ fn args(program_args: Vec<&str>, jobs: Vec<&str>) -> GateArgs {
         program: String::from("cargo"),
         program_args: program_args.into_iter().map(String::from).collect(),
         jobs: jobs.into_iter().map(String::from).collect(),
+        jobs_file: None,
         pre_build_program: None,
         pre_build_args: Vec::new(),
         pre_build_target_name: None,

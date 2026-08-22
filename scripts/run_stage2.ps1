@@ -185,7 +185,10 @@ Invoke-Crap4RustGate "CRAP slotgate" @("slotgate")
 
 Invoke-Twin4RustGate "Mirrored tests slotgate" @("slotgate")
 
-Invoke-Iceberg4RustGate "File risk slotgate" @("slotgate") -Threshold "2.6"
+# Lowered from 2.6 to 1.8 when `gate_runner.rs` dropped from 2.58 to 1.78:
+# pre-build resolution moved to `config/pre_build_resolver.rs`, where it
+# belonged. The ratchet follows the score down, never the other way.
+Invoke-Iceberg4RustGate "File risk slotgate" @("slotgate") -Threshold "1.8"
 
 
 Write-Host ""

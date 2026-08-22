@@ -4,4 +4,6 @@
 pub mod compiler_artifact_parser;
 pub mod gate_args;
 pub mod job_list_builder;
+pub mod job_source;
+pub mod pre_build_resolver;
 pub mod pre_build_runner;

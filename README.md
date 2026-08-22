@@ -74,7 +74,8 @@ slot whose 100-port window is exported as `PORT_RANGE_BASE` / `PORT_RANGE_COUNT`
 
 | Flag | Default | Description |
 |---|---|---|
-| `--jobs` | *(required)* | Comma-separated job names |
+| `--jobs` | *(one of these two)* | Comma-separated job names |
+| `--jobs-file` | *(one of these two)* | A file naming one job per line. For suites whose names no longer fit on a command line -- Windows caps one near 32 kB and a process that exceeds it fails to spawn. Giving both this and `--jobs` is an error |
 | `--program` | *(required)* | Program to run once per job |
 | `--program-args` | `""` | Comma-separated args; every `{job}` is replaced with the job name |
 | `--max-parallel` | `3` | Maximum jobs running at once |

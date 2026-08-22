@@ -3,7 +3,8 @@
 
 use crate::config::gate_args::GateArgs;
 use crate::config::job_list_builder::JobListBuilder;
-use crate::config::pre_build_runner::PreBuildRunner;
+use crate::config::job_source::JobSource;
+use crate::config::pre_build_resolver::PreBuildResolver;
 use crate::execution::executor::Executor;
 use crate::execution::job_outcome::JobOutcome;
 use crate::execution::job_runner::JobRunner;
@@ -13,16 +14,22 @@ use crate::ports::port_range_allocator::PortRangeAllocator;
 use std::process::ExitCode;
 use std::time::Duration;
 
-const LIBTEST_ARGS_FOR_DISCOVERED_BINARY: [&str; 3] = ["{job}", "--exact", "--test-threads=1"];
-
 pub struct GateRunner;
 
 impl GateRunner {
     pub async fn run(args: GateArgs) -> ExitCode {
-        let effective_args = match Self::resolve_pre_build(&args).await {
+        // Both steps work out the args a run should use and both fail the same
+        // way, so they share one exit rather than repeating it. The pre-build
+        // error is labelled where it is raised instead of where it is printed,
+        // which is what lets the two join.
+        let effective_args = match PreBuildResolver::resolve(&args)
+            .await
+            .map_err(|error| format!("PRE-BUILD FAILED: {error}"))
+            .and_then(JobSource::apply)
+        {
             Ok(effective_args) => effective_args,
             Err(error) => {
-                eprintln!("SLOTGATE — PRE-BUILD FAILED: {error}");
+                eprintln!("SLOTGATE — {error}");
                 return ExitCode::FAILURE;
             }
         };
@@ -64,44 +71,5 @@ impl GateRunner {
 
     fn print_outcome_as_it_completes(outcome: &JobOutcome) {
         println!("{}", OutcomeLine::render(outcome));
-    }
-
-    /// Without a pre-build program the arguments pass through untouched.
-    /// With one, a discovered test binary replaces `program`/`program_args`.
-    pub async fn resolve_pre_build(args: &GateArgs) -> Result<GateArgs, String> {
-        let Some(pre_build_program) = &args.pre_build_program else {
-            return Ok(args.clone());
-        };
-
-        println!(
-            "SLOTGATE — PRE-BUILD: {pre_build_program} {}",
-            args.pre_build_args.join(" ")
-        );
-        let discovered = PreBuildRunner::run(
-            pre_build_program,
-            &args.pre_build_args,
-            args.pre_build_target_name.as_deref(),
-        )
-        .await?;
-        println!();
-
-        let Some(executable) = discovered else {
-            return Ok(args.clone());
-        };
-
-        println!("SLOTGATE — PRE-BUILD discovered test binary: {executable}");
-        println!();
-
-        Ok(Self::with_discovered_binary(args, executable))
-    }
-
-    fn with_discovered_binary(args: &GateArgs, executable: String) -> GateArgs {
-        let mut effective_args = args.clone();
-        effective_args.program = executable;
-        effective_args.program_args = LIBTEST_ARGS_FOR_DISCOVERED_BINARY
-            .iter()
-            .map(|arg| String::from(*arg))
-            .collect();
-        effective_args
     }
 }

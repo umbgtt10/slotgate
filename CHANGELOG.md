@@ -5,7 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-08-22
+
+### Added
+
+- **`--jobs-file`, for suites too large to name on a command line.** A file with
+  one job per line, an alternative to `--jobs`. Blank lines are ignored and each
+  name is trimmed.
+
+  Windows caps a command line near 32 kB. `etheram-ibft` reached 366 test names
+  and `slotgate.exe` stopped spawning at all, reporting "the filename or
+  extension is too long" -- which names neither the length nor the argument
+  carrying it, and arrives after a successful build, so it reads as a test
+  failure rather than a launcher one. A suite crosses that line by growing, so
+  it never crosses back.
+
+  Stating both `--jobs` and `--jobs-file` is an error rather than a precedence
+  rule: two lists is two ideas of what to run, and quietly preferring one is how
+  a run executes something other than what its author is reading.
+
+### Changed
+
+- **Pre-build resolution moved from `GateRunner` to
+  `config/pre_build_resolver.rs`.** It reads `PreBuildRunner`, which was already
+  in that module, and hands back arguments without executing a job -- config
+  resolution rather than gate running. Beside `JobSource` it now answers the
+  same question, and `GateRunner` is left orchestrating.
+
+  This also bought the headroom `--jobs-file` needed. `gate_runner.rs` is gated
+  by `iceberg4rust` at a ratchet set just above its own score, so any feature
+  added there fails by construction. The file went from 2.58 to 1.78 and the
+  ceiling follows it down, 2.6 to 1.8 -- the direction its own commit demands.
 
 ### Added
 
