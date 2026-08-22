@@ -33,8 +33,21 @@ The long-term direction is:
 
 The shipped release provides slot-partitioned port ranges, bounded-parallel
 execution with per-job timeouts and captured output, optional cargo pre-build
-discovery, and CI-ready exit codes. See
+discovery, three ways to state the job list including scanning a tree for it,
+an optional seeded shuffle, and CI-ready exit codes. See
 [IMPLEMENTED-FEATURES.md](IMPLEMENTED-FEATURES.md) for the full list.
+
+Everything released since `0.3.0` came from `etheram-ibft` running this tool
+against 366 tests, and the pattern is worth stating: each one was a defect that
+only a real suite could surface. The command line overflowed at 366 names. The
+file that fixed it carried a byte order mark PowerShell had written, which
+became part of the first job's name -- and `cargo test --exact` matching nothing
+runs zero tests and exits 0, so that job was reported as **passed**. The feature
+that removed the file altogether then made a third route to the same silence.
+
+That last one is the one to remember. Two of these releases were not bugs in
+what the tool did but in what it *claimed*: it reported a test as passed that
+had never run. A gate that says so is worse than no gate.
 
 ## Planned Phases
 

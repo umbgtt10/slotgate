@@ -4,6 +4,31 @@ This document describes the feature set currently shipped by `slotgate`. For
 the mechanism behind it see [SLOT-ALLOCATION.md](SLOT-ALLOCATION.md); for
 released versions see [CHANGELOG.md](../CHANGELOG.md).
 
+## Version 0.5.0
+
+### Job list
+
+- `--jobs-path`, repeatable: directories or files scanned for tests. Each path
+  is a module root, so `<root>/cluster/byzantine.rs` yields
+  `cluster::byzantine::<name>` -- the mapping the compiler uses, so the names
+  are ones a test binary answers to. Verified against `etheram-ibft`: 360 names,
+  byte-identical to `cargo test -- --list`.
+- `--jobs-file`: one job per line, a byte order mark ignored.
+- Stating more than one of `--jobs`, `--jobs-path` and `--jobs-file` is an
+  error. Two lists is two ideas of what to run.
+
+### Job order
+
+- `--random`, off by default, with `--seed`. The seed is printed every time and
+  accepted back, so a failing order can be replayed. Fisher-Yates over
+  SplitMix64, no dependency.
+
+### Reporting
+
+- A job that ran no tests is reported as failed. `cargo test --exact` given a
+  name matching nothing runs zero of them and exits 0, which is the one success
+  an exit code gets wrong.
+
 ## Unreleased
 
 ### Quality gates

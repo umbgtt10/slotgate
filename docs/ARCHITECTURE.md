@@ -17,10 +17,15 @@ GateArgs (clap)
            otherwise: run it, and if --pre-build-target-name matched a
            cargo compiler-artifact, swap in that executable as the
            effective program with standard libtest args
-      2. JobListBuilder::build(&effective_args) -> Vec<Job>
-           one Job per --jobs entry, every {job} token substituted
-      3. print the plan
-      4. Executor::new(max_parallel, PortRangeAllocator, JobRunner)
+      2. JobSource::apply(effective_args) -> GateArgs
+           fills in `jobs` from whichever of --jobs, --jobs-path or
+           --jobs-file was given; stating more than one is an error
+      3. JobListBuilder::build(&effective_args) -> Vec<Job>
+           one Job per name, every {job} token substituted
+      4. JobOrder::apply(jobs, &effective_args) -> Vec<Job>
+           shuffled only when --random, always from a seed it prints
+      5. print the plan
+      6. Executor::new(max_parallel, PortRangeAllocator, JobRunner)
          Executor::run_all(jobs, print_outcome_as_it_completes)
            per job, on its own tokio task:
              SlotPool::acquire        -> SlotGuard (waits for a free slot)
@@ -43,7 +48,13 @@ from integration tests. See `docs/ADRs/ADR-EntryPointIsAShim.md`.
 | `GateRunner` | `execution/gate_runner.rs` | wires pre-build → jobs → execution → summary, owns the exit code |
 | `PreBuildRunner` | `config/pre_build_runner.rs` | runs the one-time setup command, returns any discovered executable |
 | `CompilerArtifactParser` | `config/compiler_artifact_parser.rs` | finds a test executable in cargo `--message-format=json` output |
-| `JobListBuilder` | `config/job_list_builder.rs` | expands `--jobs` into `Job`s, substituting `{job}` |
+| `JobSource` | `config/job_source.rs` | decides where the job names come from, and refuses more than one source |
+| `TestPathScanner` | `config/test_path_scanner.rs` | the names a tree contains, composed from the three below |
+| `RustFileFinder` | `config/rust_file_finder.rs` | every `.rs` file under a path, in a settled order |
+| `ModulePath` | `config/module_path.rs` | where a file sits, said the way Rust says it |
+| `TestNameReader` | `config/test_name_reader.rs` | the test names one file declares |
+| `JobListBuilder` | `config/job_list_builder.rs` | expands the names into `Job`s, substituting `{job}` |
+| `JobOrder` | `execution/job_order.rs` | the order jobs reach the pool; shuffles when `--random`, from a printed seed |
 | `Executor` | `execution/executor.rs` | spawns a task per job, bounded by the slot pool |
 | `SlotPool` | `execution/slot_pool.rs` | semaphore plus free-slot queue |
 | `SlotGuard` | `execution/slot_guard.rs` | holds a slot for a job's lifetime, releases it on drop |
