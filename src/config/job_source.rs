@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::config::gate_args::GateArgs;
+use crate::config::test_path_scanner::TestPathScanner;
 use std::fs::read_to_string;
 
 // Where the job names come from: the command line, or a file naming one per
@@ -32,14 +33,32 @@ impl JobSource {
     }
 
     pub fn resolve(args: &GateArgs) -> Result<Vec<String>, String> {
-        match (&args.jobs_file, args.jobs.is_empty()) {
-            (Some(_), false) => {
-                Err("both --jobs and --jobs-file were given; state the job list once".to_string())
-            }
-            (Some(path), true) => Self::read(&path.to_string_lossy()),
-            (None, false) => Ok(args.jobs.clone()),
-            (None, true) => Err("no jobs to run; pass --jobs or --jobs-file".to_string()),
+        let stated: Vec<&str> = [
+            (!args.jobs.is_empty()).then_some("--jobs"),
+            (!args.jobs_paths.is_empty()).then_some("--jobs-path"),
+            args.jobs_file.is_some().then_some("--jobs-file"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        match stated.as_slice() {
+            ["--jobs"] => Ok(args.jobs.clone()),
+            ["--jobs-path"] => TestPathScanner::scan(&args.jobs_paths),
+            ["--jobs-file"] => Self::read(&Self::file_path_of(args)),
+            [] => Err("no jobs to run; pass --jobs, --jobs-path or --jobs-file".to_string()),
+            several => Err(format!(
+                "{} were all given; state the job list once",
+                several.join(" and ")
+            )),
         }
+    }
+
+    fn file_path_of(args: &GateArgs) -> String {
+        args.jobs_file
+            .as_ref()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default()
     }
 
     // Blank lines are dropped and each name is trimmed. A job name never has

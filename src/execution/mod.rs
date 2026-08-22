@@ -5,6 +5,7 @@ pub mod executor;
 pub mod filesystem_safe_name;
 pub mod gate_runner;
 pub mod job;
+pub mod job_order;
 pub mod job_outcome;
 pub mod job_runner;
 pub mod job_status;

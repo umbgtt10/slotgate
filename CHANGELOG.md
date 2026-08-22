@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-22
+
+### Added
+
+- **`--jobs-path`: state where the tests are, not what they are.** Repeatable.
+  Each path is a module root, and a test in `<root>/cluster/byzantine.rs`
+  becomes `cluster::byzantine::<name>` -- the mapping the compiler uses, so the
+  names are ones a test binary answers to. Verified against `etheram-ibft`: 360
+  names scanned, byte-identical to `cargo test -- --list`.
+
+  This is what `--jobs` and `--jobs-file` should have been. The first outgrew
+  the Windows command line; the second fixed that by asking every caller to
+  enumerate its tests and write a file. Both put the caller in the business of
+  solving this tool's problem. Two paths, and the tool works out the rest.
+
+- **`--random`, off by default, with `--seed`.** Order dependence between tests
+  is a real defect and a fixed order hides it until somebody reorders something.
+  The seed is always printed and always accepted back: a shuffle that cannot be
+  replayed turns a reproducible failure into a rumour.
+
+  Fisher-Yates over SplitMix64, eleven lines, rather than a dependency on
+  `rand` for a tool whose job is spawning processes.
+
+### Fixed
+
+- **A job that ran no tests is no longer reported as passed.** `cargo test
+  --exact` given a name matching nothing runs zero tests and exits 0 -- the one
+  success the exit code gets wrong. It is reachable from a stale `--jobs` list,
+  a `--jobs-file` carrying a byte order mark, and now a `--jobs-path` scan
+  naming a test the binary does not have, so it is checked at the point every
+  route passes through.
+
+### Changed
+
+- `test_path_scanner` is three types, not one: finding the files, naming the
+  module and reading the tests. `iceberg4rust` scored the single version at
+  10.13 against a ceiling of 1.8 on nineteen points of private complexity, and
+  it was right -- one file had taken on three subjects. The ratchet stays at 1.8.
+
 ## [0.4.2] - 2026-08-22
 
 ### Fixed

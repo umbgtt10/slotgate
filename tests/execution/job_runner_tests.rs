@@ -68,6 +68,38 @@ async fn run_a_command_that_exits_zero_reports_passed() {
     assert_eq!(outcome.status, JobStatus::Passed);
 }
 
+// A job that ran nothing did not pass. `cargo test --exact` given a name no
+// test matches runs zero of them and exits 0, so this is the one success the
+// exit code gets wrong -- and it is reachable from a stale `--jobs` list, a
+// `--jobs-file` carrying a byte order mark, or a `--jobs-path` scan naming a
+// test the binary does not have. `etheram-ibft` hit it and the summary read
+// 366 passed.
+#[tokio::test]
+async fn run_a_command_that_reports_running_no_tests_reports_failed() {
+    // Arrange
+    let runner = JobRunner::new(
+        String::from("PORT_RANGE_BASE"),
+        String::from("PORT_RANGE_COUNT"),
+        Duration::from_secs(10),
+        temp_log_dir("ran_nothing"),
+    );
+    let job = Job {
+        name: String::from("matches_nothing"),
+        program: String::from("cmd.exe"),
+        args: vec![String::from("/C"), String::from("echo running 0 tests")],
+    };
+    let port_range = PortRange {
+        base: 31210,
+        count: 10,
+    };
+
+    // Act
+    let outcome = runner.run(&job, &port_range).await;
+
+    // Assert
+    assert_eq!(outcome.status, JobStatus::Failed);
+}
+
 // A job name carrying `::` is not a filename. The runner has to sanitise it for
 // the log path while still handing the child the name somebody wrote.
 #[tokio::test]

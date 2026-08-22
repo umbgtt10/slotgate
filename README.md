@@ -74,8 +74,11 @@ slot whose 100-port window is exported as `PORT_RANGE_BASE` / `PORT_RANGE_COUNT`
 
 | Flag | Default | Description |
 |---|---|---|
-| `--jobs` | *(one of these two)* | Comma-separated job names |
-| `--jobs-file` | *(one of these two)* | A file naming one job per line. For suites whose names no longer fit on a command line -- Windows caps one near 32 kB and a process that exceeds it fails to spawn. Giving both this and `--jobs` is an error |
+| `--jobs` | *(one of these three)* | Comma-separated job names |
+| `--jobs-path` | *(one of these three)* | A directory or file to scan for tests; repeatable. Each path is a module root, so `<root>/cluster/byzantine.rs` yields `cluster::byzantine::<name>`. State where the tests are instead of enumerating them |
+| `--random` | `false` | Run the jobs in a shuffled order. The seed is printed and can be replayed with `--seed` |
+| `--seed <N>` | *(drawn from the clock)* | The seed for `--random` |
+| `--jobs-file` | *(one of these three)* | A file naming one job per line. For suites whose names no longer fit on a command line -- Windows caps one near 32 kB and a process that exceeds it fails to spawn. Giving both this and `--jobs` is an error |
 | `--program` | *(required)* | Program to run once per job |
 | `--program-args` | `""` | Comma-separated args; every `{job}` is replaced with the job name |
 | `--max-parallel` | `3` | Maximum jobs running at once |

@@ -45,6 +45,15 @@ pub struct GateArgs {
     #[arg(long, value_delimiter = ',')]
     pub jobs: Vec<String>,
 
+    /// Directories or files to scan for tests, instead of naming them. Each
+    /// path is a module root: a test in `<root>/cluster/byzantine.rs` becomes
+    /// `cluster::byzantine::<name>`, the same mapping the compiler uses.
+    /// Repeatable. The point is that a caller states where its tests are rather
+    /// than enumerating several hundred of them, and never has to work around a
+    /// command-line limit that is this tool's problem to solve.
+    #[arg(long = "jobs-path")]
+    pub jobs_paths: Vec<PathBuf>,
+
     /// A file naming one job per line, instead of `--jobs`. Blank lines are
     /// ignored and each name is trimmed. For suites large enough that the names
     /// no longer fit on a command line: Windows caps one near 32 kB, and a
@@ -52,6 +61,18 @@ pub struct GateArgs {
     /// length nor the argument. Stating both this and `--jobs` is an error.
     #[arg(long)]
     pub jobs_file: Option<PathBuf>,
+
+    /// Run the jobs in a shuffled order instead of the order they were found
+    /// in. Off by default. Order dependence between tests is a real defect and
+    /// a fixed order hides it for as long as nobody reorders anything.
+    #[arg(long, default_value_t = false)]
+    pub random: bool,
+
+    /// The seed for `--random`. Omitted, one is drawn and printed. A shuffle
+    /// that cannot be replayed turns a reproducible failure into a rumour, so
+    /// the seed is always reported and always accepted back.
+    #[arg(long)]
+    pub seed: Option<u64>,
 
     /// Optional one-time setup command run before any job is scheduled, e.g. a build step.
     /// The whole run aborts if this command fails.
