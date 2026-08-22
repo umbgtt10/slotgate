@@ -1,4 +1,5 @@
-// Copyright (c) 2025-2026 Umberto Gotti
+// Copyright 2026 Umberto Gotti <umberto.gotti@umbertogotti.dev>
+// Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
 // The order the jobs are handed to the pool, when `--random` asks for one.

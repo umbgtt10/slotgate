@@ -1,4 +1,5 @@
-// Copyright (c) 2025-2026 Umberto Gotti
+// Copyright 2026 Umberto Gotti <umberto.gotti@umbertogotti.dev>
+// Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
 // Every `.rs` file under a path, in a settled order so one tree walks the same
