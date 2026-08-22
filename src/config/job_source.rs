@@ -45,10 +45,21 @@ impl JobSource {
     // Blank lines are dropped and each name is trimmed. A job name never has
     // surrounding space, so this costs nothing and forgives a file written by a
     // shell that indented it or left a trailing newline.
+    //
+    // The byte order mark is stripped for a sharper reason. Windows PowerShell
+    // writes one for `-Encoding utf8`, and it is the shell most likely to be
+    // generating this file; `str::trim` will not remove it, because U+FEFF is
+    // not whitespace. Left in place it becomes part of the first job's name --
+    // and what follows is silent. `cargo test --exact` given a name matching
+    // nothing runs zero tests and exits 0, so the job is reported as passed.
+    // `etheram-ibft` did exactly that on its first run: one byzantine cluster
+    // test "passing" in 0.07 seconds while its siblings took fifty.
     fn read(path: &str) -> Result<Vec<String>, String> {
         let contents = read_to_string(path)
             .map_err(|error| format!("--jobs-file {path} could not be read: {error}"))?;
         let names: Vec<String> = contents
+            .strip_prefix('\u{feff}')
+            .unwrap_or(&contents)
             .lines()
             .map(str::trim)
             .filter(|line| !line.is_empty())

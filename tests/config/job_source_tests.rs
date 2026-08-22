@@ -159,6 +159,24 @@ fn resolve_of_a_file_skips_blank_lines_and_trims() {
     assert_eq!(resolved, owned(&["alpha", "beta"]));
 }
 
+// Windows PowerShell 5.1 writes a UTF-8 BOM for `-Encoding utf8`, and it is the
+// shell most likely to be generating this file. Left in place the BOM becomes
+// part of the first job's name, so that job matches nothing and fails while
+// every other one passes -- a failure that looks like a flaky test rather than
+// a corrupt list. `etheram-ibft` produced exactly that on the first run.
+#[test]
+fn resolve_of_a_file_written_with_a_byte_order_mark_ignores_it() {
+    // Arrange
+    let path = file_with("bom", "\u{feff}alpha\nbeta\n");
+    let args = args_with(Vec::new(), Some(path));
+
+    // Act
+    let resolved = JobSource::resolve(&args).expect("the file should resolve");
+
+    // Assert
+    assert_eq!(resolved, owned(&["alpha", "beta"]));
+}
+
 #[test]
 fn resolve_of_a_missing_file_is_an_error() {
     // Arrange

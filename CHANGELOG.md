@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-08-22
+
+### Fixed
+
+- **A byte order mark at the head of `--jobs-file` no longer joins the first
+  job's name.** Windows PowerShell writes one for `-Encoding utf8`, and
+  `str::trim` does not remove it: U+FEFF is not whitespace.
+
+  The consequence was silent rather than loud. `cargo test --exact` given a name
+  that matches nothing runs zero tests and **exits 0**, so the job was reported
+  as passed. `etheram-ibft` ran 366 jobs and saw 365 real results plus one
+  byzantine cluster test "passing" in 0.07 seconds while its siblings took
+  fifty. A gate that reports a skipped test as a passed one is worse than a
+  gate that fails.
+
 ## [0.4.1] - 2026-08-22
 
 ### Fixed
