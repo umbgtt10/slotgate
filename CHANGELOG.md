@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-08-22
+
+### Fixed
+
+- **`--jobs-file` alone now works.** 0.4.0 gave `--jobs` a `default_value`,
+  which on a `Vec` fills it with one empty string rather than leaving it empty
+  -- so an absent `--jobs` read as present, collided with `--jobs-file`, and
+  every real run died on "state the job list once".
+
+  The unit tests could not see it: they build `GateArgs` by hand and pass an
+  empty vector, which no command line can produce. Only parsing a real argv
+  reaches the defaulting, and nothing did. The regression test does.
+
 ## [0.4.0] - 2026-08-22
 
 ### Added

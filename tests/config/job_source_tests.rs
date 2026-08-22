@@ -9,6 +9,7 @@
 // "the filename or extension is too long" and no indication that the length is
 // the problem. `--jobs-file` states them one per line instead.
 
+use clap::Parser;
 use slotgate::config::gate_args::GateArgs;
 use slotgate::config::job_source::JobSource;
 use std::env;
@@ -54,6 +55,31 @@ fn apply_of_a_file_returns_args_carrying_those_jobs() {
 
     // Act
     let applied = JobSource::apply(args).expect("the file should resolve");
+
+    // Assert
+    assert_eq!(applied.jobs, owned(&["alpha", "beta"]));
+}
+
+// Parsed by clap rather than built by hand, because that is where this went
+// wrong. Every other test here constructs `GateArgs` directly and passes an
+// empty `jobs` vector, which no command line can produce on its own: a
+// `default_value` on a `Vec` fills it with one empty string, so an absent
+// `--jobs` read as present and every real run died on "state the job list
+// once". The suite was green throughout.
+#[test]
+fn apply_of_args_parsed_with_only_a_file_resolves_that_file() {
+    // Arrange
+    let path = file_with("parsed", "alpha\nbeta\n");
+    let args = GateArgs::parse_from([
+        "slotgate",
+        "--program",
+        "cargo",
+        "--jobs-file",
+        &path.to_string_lossy(),
+    ]);
+
+    // Act
+    let applied = JobSource::apply(args).expect("a parsed --jobs-file should resolve");
 
     // Assert
     assert_eq!(applied.jobs, owned(&["alpha", "beta"]));

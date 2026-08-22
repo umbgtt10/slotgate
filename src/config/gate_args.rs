@@ -37,7 +37,12 @@ pub struct GateArgs {
     #[arg(long, value_delimiter = ',', default_value = "")]
     pub program_args: Vec<String>,
 
-    #[arg(long, value_delimiter = ',', default_value = "")]
+    /// Comma-separated job names, or state them with `--jobs-file`. No
+    /// `default_value`: on a `Vec` that fills the vector with one empty string
+    /// rather than leaving it empty, so an absent `--jobs` reads as present and
+    /// collides with `--jobs-file`. Every unit test here builds `GateArgs` by
+    /// hand and none of them could see that; only a real command line could.
+    #[arg(long, value_delimiter = ',')]
     pub jobs: Vec<String>,
 
     /// A file naming one job per line, instead of `--jobs`. Blank lines are
