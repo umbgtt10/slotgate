@@ -10,12 +10,13 @@ use slotgate::ports::port_range_allocator::PortRangeAllocator;
 use std::collections::BTreeSet;
 use std::env::temp_dir;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
 
-fn new_executor(max_parallel: usize, log_dir: std::path::PathBuf) -> Executor {
+fn new_executor(max_parallel: usize, log_dir: PathBuf) -> Executor {
     let port_allocator = PortRangeAllocator::new(32000, 50);
     let job_runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
@@ -34,7 +35,7 @@ fn quick_job(name: &str, exit_code: u32) -> Job {
     }
 }
 
-fn temp_log_dir(test_name: &str) -> std::path::PathBuf {
+fn temp_log_dir(test_name: &str) -> PathBuf {
     let dir = temp_dir().join(format!("slotgate_executor_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
     dir

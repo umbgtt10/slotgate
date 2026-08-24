@@ -8,10 +8,11 @@ use slotgate::execution::job_status::JobStatus;
 use slotgate::ports::port_range::PortRange;
 use std::env::temp_dir;
 use std::fs;
+use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
-fn temp_log_dir(test_name: &str) -> std::path::PathBuf {
+fn temp_log_dir(test_name: &str) -> PathBuf {
     let dir = temp_dir().join(format!("slotgate_job_runner_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
     dir
