@@ -5,6 +5,54 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-24
+
+How the gates are run, and where the crate lives. No runner behaviour changed:
+the same jobs get the same slots and the same port ranges. Minor rather than
+patch because the published crate moved to `core/` and the repository became a
+workspace.
+
+### Added
+- `xtask/`, a real crate replacing the stage 2 PowerShell script. Each of the
+  four gates is a `Gate` implementation constructed against a `CommandRunner`
+  trait, so the argument lists and failure messages are covered by 63
+  integration tests rather than being unobservable shell. It is a workspace
+  member and the house rules cover it -- the crate that runs the gates is not
+  exempt from them.
+- `.github/workflows/ci.yml`: both stages on Ubuntu, Windows and macOS, for
+  every pull request and every push to `main`. CI runs `just stage1` /
+  `just stage2` -- the same two commands a developer runs -- so there is no
+  second definition of the gates to drift out of step.
+
+### Changed
+- Gates run through `just stage1` / `just stage2` on all three platforms.
+- **The repository is a workspace: `core/` holds the published crate, `xtask/`
+  runs the gates.** The split is load-bearing rather than tidy-minded. While the
+  crate sat at the repository root, its package directory *was* the repository
+  root, so `cargo stern4rust` walked `xtask/tests/**` and reported its test
+  functions as living "in the source tree" -- files belonging to a different
+  package entirely. `--package` does not narrow it, because the scope is the
+  directory.
+
+  The published crate is unaffected: same name, same binary, and `cargo package`
+  still verifies.
+- CI checks formatting instead of applying it (`cargo fmt --check` when `CI` is
+  set), so drift fails the build rather than being silently rewritten where
+  nobody is there to review it. A local `just stage1` still formats in place.
+- The twin gate's expected argument list now names the subcommand and the
+  package separately in its test. They are both bare names and they are not the
+  same name, which is how a careless rename turns `cargo twin4rust --package
+  slotgate` into `cargo slotgate --package slotgate` -- the exact mistake this
+  migration made once, caught by the gate rather than by the test.
+
+### Fixed
+- `CLAUDE.md` described `docs/header.txt` as holding a two-line header. It holds
+  three.
+
+### Removed
+- `scripts/run_stage1.ps1` and `scripts/run_stage2.ps1`. A Windows-only gate is
+  not a gate contributors on Linux or macOS can run.
+
 ## [0.5.0] - 2026-08-22
 
 ### Added

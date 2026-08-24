@@ -60,7 +60,7 @@ incidental rather than a supported API.
 
 ## Enforcement
 
-`scripts/run_stage2.ps1` runs `cargo crap4rust` and fails on any crappy
+`just stage2` runs `cargo crap4rust` and fails on any crappy
 function, so a future `main` that grows logic back will be caught. `cargo
 twin4rust` in the same script requires every new library file to carry a
 mirrored test file.
