@@ -16,6 +16,32 @@ use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
 
+// A shell is the portable way to exit with a chosen code and to read an
+// environment variable back out -- just not the same shell, and not the same
+// variable syntax. Selecting both here keeps every test running on every
+// platform rather than skipping them off Windows.
+#[cfg(windows)]
+const SHELL: &str = "cmd.exe";
+
+#[cfg(not(windows))]
+const SHELL: &str = "sh";
+
+#[cfg(windows)]
+const SHELL_FLAG: &str = "/C";
+
+#[cfg(not(windows))]
+const SHELL_FLAG: &str = "-c";
+
+#[cfg(windows)]
+fn echo_variable(name: &str) -> String {
+    format!("echo %{name}%")
+}
+
+#[cfg(not(windows))]
+fn echo_variable(name: &str) -> String {
+    format!("echo ${name}")
+}
+
 fn new_executor(max_parallel: usize, log_dir: PathBuf) -> Executor {
     let port_allocator = PortRangeAllocator::new(32000, 50);
     let job_runner = JobRunner::new(
@@ -30,9 +56,32 @@ fn new_executor(max_parallel: usize, log_dir: PathBuf) -> Executor {
 fn quick_job(name: &str, exit_code: u32) -> Job {
     Job {
         name: String::from(name),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), format!("exit {exit_code}")],
+        program: String::from(SHELL),
+        args: shell_args(&format!("exit {exit_code}")),
     }
+}
+
+fn shell_args(script: &str) -> Vec<String> {
+    vec![String::from(SHELL_FLAG), String::from(script)]
+}
+
+// Sleeping is the one thing `cmd.exe` cannot do without help, so Windows takes
+// a different program here rather than a different script.
+#[cfg(windows)]
+fn sleep_command(millis: u32) -> (String, Vec<String>) {
+    (
+        String::from("powershell"),
+        vec![
+            String::from("-Command"),
+            format!("Start-Sleep -Milliseconds {millis}"),
+        ],
+    )
+}
+
+#[cfg(not(windows))]
+fn sleep_command(millis: u32) -> (String, Vec<String>) {
+    let seconds = f64::from(millis) / 1000.0;
+    (String::from(SHELL), shell_args(&format!("sleep {seconds}")))
 }
 
 fn temp_log_dir(test_name: &str) -> PathBuf {
@@ -48,8 +97,8 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
     let executor = new_executor(max_parallel, temp_log_dir("slot_owned_port_ranges"));
     let echo_port_job = |name: &str| Job {
         name: String::from(name),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), String::from("echo %PORT_RANGE_BASE%")],
+        program: String::from(SHELL),
+        args: shell_args(&echo_variable("PORT_RANGE_BASE")),
     };
     let jobs = vec![
         echo_port_job("p1"),
@@ -84,13 +133,13 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
 async fn run_all_bounds_wall_clock_time_by_max_parallel() {
     // Arrange
     let executor = new_executor(4, temp_log_dir("bounds_wall_clock"));
-    let sleepy_job = |name: &str| Job {
-        name: String::from(name),
-        program: String::from("powershell"),
-        args: vec![
-            String::from("-Command"),
-            String::from("Start-Sleep -Milliseconds 500"),
-        ],
+    let sleepy_job = |name: &str| {
+        let (program, args) = sleep_command(500);
+        Job {
+            name: String::from(name),
+            program,
+            args,
+        }
     };
     let jobs = vec![
         sleepy_job("j1"),

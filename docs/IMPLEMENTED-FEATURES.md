@@ -118,7 +118,9 @@ The port variable names are configurable with `--port-env-base` and
 
 - `main.rs` is a shim over `GateRunner`, so all orchestration is reachable from
   integration tests
-- `src/config`, `src/execution` and `src/ports` mirrored exactly by `tests/`
-- `scripts/run_stage1.ps1` (fmt, clippy, tests) and `scripts/run_stage2.ps1`
-  (`cargo crap4rust` plus `cargo twin4rust`)
+- `core/src/config`, `core/src/execution` and `core/src/ports` mirrored
+  exactly by `core/tests/`
+- `just stage1` (fmt, clippy, tests) and `just stage2` (`cargo xtask stage2`:
+  house rules, `cargo crap4rust`, `cargo twin4rust`, file risk), both running
+  the same on Windows, Linux and macOS and both run by CI
 - `docs/ARCHITECTURE.md`, `docs/SLOT-ALLOCATION.md`, `docs/ADRs/`, `CLAUDE.md`

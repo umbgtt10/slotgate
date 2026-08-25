@@ -9,10 +9,26 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+// A shell is the portable way to exit with a chosen code -- just not the same
+// shell. Selecting it here keeps every test running on every platform rather
+// than skipping them off Windows. The scripts themselves (`exit 0`, `exit 1`)
+// read the same in both.
+#[cfg(windows)]
+const SHELL: &str = "cmd.exe";
+
+#[cfg(not(windows))]
+const SHELL: &str = "sh";
+
+#[cfg(windows)]
+const SHELL_FLAG: &str = "/C";
+
+#[cfg(not(windows))]
+const SHELL_FLAG: &str = "-c";
+
 fn args_running(command: &str, jobs: &[&str], log_dir: &str) -> GateArgs {
     let mut args = args_without_pre_build();
-    args.program = String::from("cmd.exe");
-    args.program_args = vec![String::from("/C"), String::from(command)];
+    args.program = String::from(SHELL);
+    args.program_args = vec![String::from(SHELL_FLAG), String::from(command)];
     args.jobs = jobs.iter().map(|job| String::from(*job)).collect();
     args.timeout_secs = 30;
     args.log_dir = temp_log_dir(log_dir);

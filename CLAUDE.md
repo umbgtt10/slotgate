@@ -29,18 +29,26 @@ That means:
 
 ## Quality Gates
 
-### Mandatory after every change to `src/` or `tests/`
+### Mandatory after every change to `core/src/` or `core/tests/`
 
 Run gates:
 
-`powershell -File scripts\run_stage1.ps1`
-`powershell -File scripts\run_stage2.ps1`
+`just stage1`
+`just stage2`
 
 If either gate is not green, the work is not complete.
 
+Both run identically on Windows, Linux and macOS, and CI runs the same two
+commands -- there is no second definition of the gates to drift out of step.
+
 Stage 1 is formatting, clippy and tests -- cargo built-ins only, so it works on
-a fresh checkout. Stage 2 is four installed cargo subcommands, run in this
-order:
+a fresh checkout with none of the house tools installed.
+
+Stage 2 is `cargo xtask stage2` -- a real crate under `xtask/`, gated like any
+other code, rather than a script. Each gate is a `Gate` implementation
+constructed against a `CommandRunner` trait, so the argument lists and the
+failure messages are covered by `xtask`'s own integration tests. It runs four
+installed cargo subcommands, in this order:
 
 | gate | asks |
 |---|---|
@@ -54,14 +62,28 @@ directory splits: a layout it is about to reject is a layout the other three
 would have measured for nothing. Its findings are also the cheapest to act on.
 
 All twenty-one rules are enforced, with nothing skipped and nothing
-unconfigured. `docs/header.txt` holds the two-line header every `.rs` file
+unconfigured. `docs/header.txt` holds the three-line header every `.rs` file
 carries, and `stern4rust.toml` names it -- in the config rather than the gate
 script, so a hand-run of `cargo stern4rust` checks exactly what the gate does.
 
+The stern gate is scoped to `slotgate` **and** `xtask`. The crate that runs the
+gates is not exempt from them.
+
+`cargo install just`
+`cargo install cargo-llvm-cov`
 `cargo install cargo-stern4rust`
 `cargo install cargo-crap4rust`
 `cargo install cargo-twin4rust`
 `cargo install cargo-iceberg4rust`
+
+## Layout
+
+The repository is a workspace: `core/` is the published crate and `xtask/` runs
+the gates. That split is load-bearing rather than tidy-minded. While the crate
+sat at the repository root, its package directory *was* the repository root, so
+`cargo stern4rust` walked `xtask/tests/**` and reported its test functions as
+living "in the source tree" -- files belonging to a different package entirely.
+`--package` does not narrow it, because the scope is the directory.
 
 ## Structure
 
@@ -69,14 +91,14 @@ script, so a hand-run of `cargo stern4rust` checks exactly what the gate does.
 Orchestration lives in the library so it is reachable from integration tests —
 a binary entry point is not.
 
-The three module trees under `src/` are mirrored exactly by `tests/`, which is
+The three module trees under `core/src/` are mirrored exactly by `core/tests/`, which is
 what `twin4rust` enforces:
 
 | Source | Tests |
 |---|---|
-| `src/config/` | `tests/config/` |
-| `src/execution/` | `tests/execution/` |
-| `src/ports/` | `tests/ports/` |
+| `core/src/config/` | `core/tests/config/` |
+| `core/src/execution/` | `core/tests/execution/` |
+| `core/src/ports/` | `core/tests/ports/` |
 
 ## Orthogonality, trait surface and cognitive complexity
 

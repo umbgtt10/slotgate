@@ -26,6 +26,42 @@ non-overlapping ports, so they can all run at once.
 cargo install slotgate
 ```
 
+## Development
+
+```sh
+just stage1
+just stage2
+```
+
+Both must be green before a change is complete, and both run the same way on
+Windows, Linux and macOS. Stage 1 is formatting, clippy and tests — cargo
+built-ins only, so it works on a fresh checkout with none of the tools below
+installed. Stage 2 is `cargo xtask stage2`, which runs, in order:
+`cargo stern4rust` (house coding rules), `cargo crap4rust` (complexity against
+coverage), `cargo twin4rust` (every source file has a mirrored test file) and
+`cargo iceberg4rust` (file risk).
+
+The repository is a workspace: `core/` is the published crate, `xtask/` runs the
+gates, and `xtask` is held to the house rules alongside `core`.
+
+Everything the two stages need, none of which ships with cargo:
+
+| Tool | Install | Needed by |
+|---|---|---|
+| [`just`](https://github.com/casey/just) | `cargo install just` | both stages |
+| [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) | `cargo install cargo-llvm-cov` | stage 2 |
+| `llvm-tools` rustup component | `rustup component add llvm-tools` | stage 2 |
+| `cargo-stern4rust` | `cargo install cargo-stern4rust` | stage 2 |
+| `cargo-crap4rust` | `cargo install cargo-crap4rust` | stage 2 |
+| `cargo-twin4rust` | `cargo install cargo-twin4rust` | stage 2 |
+| `cargo-iceberg4rust` | `cargo install cargo-iceberg4rust` | stage 2 |
+
+`cargo-llvm-cov` and `llvm-tools` are what the CRAP gate needs; without them it
+fails with a bare exit code that says nothing about a missing install.
+
+CI (`.github/workflows/ci.yml`) runs both stages on Ubuntu, Windows and macOS
+for every pull request and every push to `main`.
+
 ## Documentation
 
 | Document | Contents |
