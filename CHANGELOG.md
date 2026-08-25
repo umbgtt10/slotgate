@@ -62,6 +62,21 @@ workspace.
   they are payloads being parsed, not paths anything opens.
 
 ### Fixed
+- **`--port-range-size 0` no longer panics.** The plan line computes
+  `base + size - 1`, so a zero size at base zero underflowed and
+  `attempt to subtract with overflow` killed the run before any job started --
+  in release it printed `ports 0-4294967295` instead. Both arguments are `u16`
+  with no bound, so the CLI accepted it.
+
+  Rejected at parse time rather than defended against downstream: a slot with no
+  ports is meaningless for a tool whose whole job is handing out port ranges.
+  `--port-range-size 0` now errors with
+  `0 is not in 1..=65535`. `core/src/config/gate_args.rs` had no mirrored test
+  file at all; it has one now, pinning both the rejection and the smallest
+  range a slot can still own.
+
+  Found by Copilot reviewing this pull request. The bug predates it -- the file
+  only *moved* -- but moving the whole crate put it back in front of a reviewer.
 - `CLAUDE.md` described `docs/header.txt` as holding a two-line header. It holds
   three.
 - `run_returns_an_error_when_the_command_exits_nonzero` asserted only

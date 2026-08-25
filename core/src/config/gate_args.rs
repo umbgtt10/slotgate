@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use clap::Parser;
+use clap::value_parser;
 use std::path::PathBuf;
 
 /// Bounded-parallelism job executor with per-slot port range isolation.
@@ -17,7 +18,11 @@ pub struct GateArgs {
     #[arg(long, default_value_t = 30000)]
     pub port_range_base: u16,
 
-    #[arg(long, default_value_t = 100)]
+    /// Rejected at zero rather than defended against downstream. A slot with no
+    /// ports is meaningless for a tool whose whole job is handing out port
+    /// ranges, and the plan line computes `base + size - 1`, which underflows
+    /// on a zero size at base zero.
+    #[arg(long, default_value_t = 100, value_parser = value_parser!(u16).range(1..))]
     pub port_range_size: u16,
 
     #[arg(long, default_value = "PORT_RANGE_BASE")]
