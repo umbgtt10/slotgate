@@ -45,9 +45,29 @@ workspace.
   slotgate` into `cargo slotgate --package slotgate` -- the exact mistake this
   migration made once, caught by the gate rather than by the test.
 
+- **The test suite runs on Linux and macOS, not only Windows.** slotgate spawns
+  processes, so its tests spawn processes -- and every one of them named
+  `cmd.exe` or `powershell`. Fourteen sites across four files now select the
+  platform's shell (`cmd.exe /C` or `sh -c`) and its variable syntax
+  (`%NAME%` or `$NAME`), so each test runs everywhere rather than being skipped
+  off Windows.
+
+  Three cases could not share one script. Sleeping has no `cmd.exe` builtin, so
+  Windows keeps `powershell -Command Start-Sleep`. Printing a file is `type`
+  against `cat`, and the path has to stay a separate argument on Windows --
+  folding it into one quoted `/C` string makes Rust's own escaping double up and
+  the command exits 1.
+
+  Paths like `C:\target\all_tests-abc.exe` inside test JSON were left alone:
+  they are payloads being parsed, not paths anything opens.
+
 ### Fixed
 - `CLAUDE.md` described `docs/header.txt` as holding a two-line header. It holds
   three.
+- `run_returns_an_error_when_the_command_exits_nonzero` asserted only
+  `is_err()`, so on any non-Windows machine it passed by failing to find
+  `cmd.exe` at all. It now asserts the command ran and reported, rather than
+  accepting a launch failure as the error it was looking for.
 
 ### Removed
 - `scripts/run_stage1.ps1` and `scripts/run_stage2.ps1`. A Windows-only gate is

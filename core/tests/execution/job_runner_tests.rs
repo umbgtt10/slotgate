@@ -12,6 +12,56 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
+// A shell is the portable way to exit with a chosen code, echo a line and read
+// an environment variable back out -- just not the same shell, and not the same
+// variable syntax. Selecting both here keeps every test running on every
+// platform rather than skipping them off Windows.
+#[cfg(windows)]
+const SHELL: &str = "cmd.exe";
+
+#[cfg(not(windows))]
+const SHELL: &str = "sh";
+
+#[cfg(windows)]
+const SHELL_FLAG: &str = "/C";
+
+#[cfg(not(windows))]
+const SHELL_FLAG: &str = "-c";
+
+#[cfg(windows)]
+fn echo_variables(names: &[&str]) -> String {
+    let references: Vec<String> = names.iter().map(|name| format!("%{name}%")).collect();
+    format!("echo {}", references.join(" "))
+}
+
+#[cfg(not(windows))]
+fn echo_variables(names: &[&str]) -> String {
+    let references: Vec<String> = names.iter().map(|name| format!("${name}")).collect();
+    format!("echo {}", references.join(" "))
+}
+
+fn shell_args(script: &str) -> Vec<String> {
+    vec![String::from(SHELL_FLAG), String::from(script)]
+}
+
+// Sleeping is the one thing `cmd.exe` cannot do without help, so Windows takes
+// a different program here rather than a different script.
+#[cfg(windows)]
+fn sleep_command(seconds: u32) -> (String, Vec<String>) {
+    (
+        String::from("powershell"),
+        vec![
+            String::from("-Command"),
+            format!("Start-Sleep -Seconds {seconds}"),
+        ],
+    )
+}
+
+#[cfg(not(windows))]
+fn sleep_command(seconds: u32) -> (String, Vec<String>) {
+    (String::from(SHELL), shell_args(&format!("sleep {seconds}")))
+}
+
 fn temp_log_dir(test_name: &str) -> PathBuf {
     let dir = temp_dir().join(format!("slotgate_job_runner_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
@@ -29,8 +79,8 @@ async fn run_a_command_that_exits_nonzero_reports_failed() {
     );
     let job = Job {
         name: String::from("fails"),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), String::from("exit 1")],
+        program: String::from(SHELL),
+        args: shell_args("exit 1"),
     };
     let port_range = PortRange {
         base: 31010,
@@ -55,8 +105,8 @@ async fn run_a_command_that_exits_zero_reports_passed() {
     );
     let job = Job {
         name: String::from("succeeds"),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), String::from("exit 0")],
+        program: String::from(SHELL),
+        args: shell_args("exit 0"),
     };
     let port_range = PortRange {
         base: 31000,
@@ -87,8 +137,8 @@ async fn run_a_command_that_reports_running_no_tests_reports_failed() {
     );
     let job = Job {
         name: String::from("matches_nothing"),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), String::from("echo running 0 tests")],
+        program: String::from(SHELL),
+        args: shell_args("echo running 0 tests"),
     };
     let port_range = PortRange {
         base: 31210,
@@ -117,8 +167,8 @@ async fn run_a_job_whose_name_contains_double_colons_still_runs_successfully() {
         name: String::from(
             "cluster::byzantine_tests::byzantine_new_view_from_non_proposer_is_rejected",
         ),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), String::from("exit 0")],
+        program: String::from(SHELL),
+        args: shell_args("exit 0"),
     };
     let port_range = PortRange {
         base: 33000,
@@ -144,11 +194,8 @@ async fn run_captures_stdout_to_the_returned_path() {
     );
     let job = Job {
         name: String::from("prints_marker"),
-        program: String::from("cmd.exe"),
-        args: vec![
-            String::from("/C"),
-            String::from("echo distinctive_marker_12345"),
-        ],
+        program: String::from(SHELL),
+        args: shell_args("echo distinctive_marker_12345"),
     };
     let port_range = PortRange {
         base: 31600,
@@ -172,13 +219,11 @@ async fn run_enforces_a_timeout_and_reports_timed_out() {
         Duration::from_millis(300),
         temp_log_dir("timeout"),
     );
+    let (program, args) = sleep_command(30);
     let job = Job {
         name: String::from("sleeps_too_long"),
-        program: String::from("powershell"),
-        args: vec![
-            String::from("-Command"),
-            String::from("Start-Sleep -Seconds 30"),
-        ],
+        program,
+        args,
     };
     let port_range = PortRange {
         base: 31700,
@@ -209,11 +254,8 @@ async fn run_injects_port_range_env_vars_readable_by_the_child() {
     );
     let job = Job {
         name: String::from("prints_env"),
-        program: String::from("cmd.exe"),
-        args: vec![
-            String::from("/C"),
-            String::from("echo %PORT_RANGE_BASE% %PORT_RANGE_COUNT%"),
-        ],
+        program: String::from(SHELL),
+        args: shell_args(&echo_variables(&["PORT_RANGE_BASE", "PORT_RANGE_COUNT"])),
     };
     let port_range = PortRange {
         base: 31500,
@@ -244,11 +286,8 @@ async fn run_publishes_the_job_log_directory_to_the_child() {
     );
     let job = Job {
         name: String::from("cluster::some_tests::a_case"),
-        program: String::from("cmd.exe"),
-        args: vec![
-            String::from("/C"),
-            String::from("echo %SLOTGATE_JOB_LOG_DIR%"),
-        ],
+        program: String::from(SHELL),
+        args: shell_args(&echo_variables(&["SLOTGATE_JOB_LOG_DIR"])),
     };
     let port_range = PortRange {
         base: 31700,
@@ -277,8 +316,8 @@ async fn run_publishes_the_unsanitised_job_name_to_the_child() {
     );
     let job = Job {
         name: String::from("cluster::some_tests::a_case"),
-        program: String::from("cmd.exe"),
-        args: vec![String::from("/C"), String::from("echo %SLOTGATE_JOB_NAME%")],
+        program: String::from(SHELL),
+        args: shell_args(&echo_variables(&["SLOTGATE_JOB_NAME"])),
     };
     let port_range = PortRange {
         base: 31710,
