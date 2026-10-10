@@ -47,24 +47,41 @@ a fresh checkout with none of the house tools installed.
 Stage 2 is `cargo xtask stage2` -- a real crate under `xtask/`, gated like any
 other code, rather than a script. Each gate is a `Gate` implementation
 constructed against a `CommandRunner` trait, so the argument lists and the
-failure messages are covered by `xtask`'s own integration tests. It runs four
+failure messages are covered by `xtask`'s own integration tests. It runs five
 installed cargo subcommands, in this order:
 
 | gate | asks |
 |---|---|
 | `cargo stern4rust` | do the house coding rules hold |
+| `cargo dry4rust` | did this change add duplicated code |
 | `cargo crap4rust` | is any function complex and untested |
 | `cargo twin4rust` | does every source file have a mirrored test file |
 | `cargo iceberg4rust` | is any file's private implementation risk too high |
 
 stern4rust runs **first** because its corrections are renames, file moves and
-directory splits: a layout it is about to reject is a layout the other three
+directory splits: a layout it is about to reject is a layout the other four
 would have measured for nothing. Its findings are also the cheapest to act on.
 
-All twenty-one rules are enforced, with nothing skipped and nothing
-unconfigured. `docs/header.txt` holds the three-line header every `.rs` file
-carries, and `stern4rust.toml` names it -- in the config rather than the gate
-script, so a hand-run of `cargo stern4rust` checks exactly what the gate does.
+dry4rust runs **second** for the same reason: removing a duplicate moves code
+between files, which changes what the three behind it measure. It scans
+`core/src` only -- tests repeat their arrangement by design -- and checks with
+zero ceilings against `dry4rust-baseline.json`, the duplication already there
+when the gate arrived. So it fails on what a change adds, not on what it
+inherited. The baseline records 0 groups: when the gate arrived there was
+nothing in `core/src` to remove, so the first copy a change adds fails it.
+
+It counts only code units of 25 AST nodes or more, the floor the tool family
+shares. Re-record the baseline only to drop groups that are gone, never to
+admit new ones, and at the same floor -- a baseline matches only at the floor it
+was recorded at:
+`cargo dry4rust --path core/src --min-nodes 25 --baseline "$PWD/dry4rust-baseline.json" baseline`.
+
+All twenty-two stern4rust rules apply, with nothing skipped, nothing
+unconfigured and nothing baselined -- `stern4rust.toml` carries no `skip` and
+no `rules` selection. `docs/header.txt` holds the three-line header every `.rs`
+file carries, and `stern4rust.toml` names it -- in the config rather than the
+gate script, so a hand-run of `cargo stern4rust` checks exactly what the gate
+does.
 
 The stern gate is scoped to `slotgate` **and** `xtask`. The crate that runs the
 gates is not exempt from them.
@@ -72,6 +89,7 @@ gates is not exempt from them.
 `cargo install just`
 `cargo install cargo-llvm-cov`
 `cargo install cargo-stern4rust`
+`cargo install cargo-dry4rust`
 `cargo install cargo-crap4rust`
 `cargo install cargo-twin4rust`
 `cargo install cargo-iceberg4rust`

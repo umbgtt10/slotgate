@@ -4,6 +4,20 @@ This document describes the feature set currently shipped by `slotgate`. For
 the mechanism behind it see [SLOT-ALLOCATION.md](SLOT-ALLOCATION.md); for
 released versions see [CHANGELOG.md](../CHANGELOG.md).
 
+## Version 0.6.1
+
+### Quality gates
+
+- Stage 2 runs five installed cargo subcommands: `stern4rust` (house coding
+  rules), `dry4rust` (no duplication beyond `dry4rust-baseline.json`),
+  `crap4rust`, `twin4rust` and `iceberg4rust` -- in that order, because the
+  first two are fixed by moving code, which changes what the last three measure.
+- All twenty-two stern4rust rules are enforced: nothing skipped, nothing
+  unconfigured, nothing baselined. `docs/header.txt` holds the three-line
+  header every `.rs` file carries and `stern4rust.toml` names it.
+- `dry4rust` scans `core/src` at a 25-node floor with zero ceilings against a
+  baseline that records 0 groups, so the first copy a change adds fails it.
+
 ## Version 0.5.0
 
 ### Job list
@@ -28,14 +42,6 @@ released versions see [CHANGELOG.md](../CHANGELOG.md).
 - A job that ran no tests is reported as failed. `cargo test --exact` given a
   name matching nothing runs zero of them and exits 0, which is the one success
   an exit code gets wrong.
-
-## Unreleased
-
-### Quality gates
-
-- All twenty-one stern4rust rules are enforced: nothing skipped, nothing
-  unconfigured. `docs/header.txt` holds the two-line header every `.rs` file
-  carries and `stern4rust.toml` names it.
 
 ## Version 0.3.0
 

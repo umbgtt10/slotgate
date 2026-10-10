@@ -37,7 +37,8 @@ Both must be green before a change is complete, and both run the same way on
 Windows, Linux and macOS. Stage 1 is formatting, clippy and tests — cargo
 built-ins only, so it works on a fresh checkout with none of the tools below
 installed. Stage 2 is `cargo xtask stage2`, which runs, in order:
-`cargo stern4rust` (house coding rules), `cargo crap4rust` (complexity against
+`cargo stern4rust` (house coding rules), `cargo dry4rust` (no duplication
+beyond `dry4rust-baseline.json`), `cargo crap4rust` (complexity against
 coverage), `cargo twin4rust` (every source file has a mirrored test file) and
 `cargo iceberg4rust` (file risk).
 
@@ -52,6 +53,7 @@ Everything the two stages need, none of which ships with cargo:
 | [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) | `cargo install cargo-llvm-cov` | stage 2 |
 | `llvm-tools` rustup component | `rustup component add llvm-tools` | stage 2 |
 | `cargo-stern4rust` | `cargo install cargo-stern4rust` | stage 2 |
+| `cargo-dry4rust` | `cargo install cargo-dry4rust` | stage 2 |
 | `cargo-crap4rust` | `cargo install cargo-crap4rust` | stage 2 |
 | `cargo-twin4rust` | `cargo install cargo-twin4rust` | stage 2 |
 | `cargo-iceberg4rust` | `cargo install cargo-iceberg4rust` | stage 2 |

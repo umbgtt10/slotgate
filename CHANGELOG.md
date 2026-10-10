@@ -5,6 +5,52 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-10-10
+
+How the gates are run, again; nothing about the runner. Same CLI, same output,
+same exit codes, same slots and port ranges. Patch rather than minor because no
+`pub` item of the `slotgate` library changed signature -- no file under
+`core/src/` changed at all. Every change is in `xtask/` (which is not
+published), in test files, in the justfile, in CI and in the docs.
+
+### Added
+- **A duplication gate: `cargo dry4rust`, second in stage 2.** A `DryGate` in
+  `xtask`, built like the other four against the `CommandRunner` trait, with
+  its argument list and failure messages pinned by eight integration tests. It
+  scans `core/src` at a 25-node floor with zero ceilings against
+  `dry4rust-baseline.json`, so it fails on duplication a change adds rather than
+  on what it inherited. Exit 1 reads as "duplication was added beyond" the
+  baseline; any other non-zero code, or none, is reported as the exit code so a
+  tool that measured nothing cannot read as a clean scan.
+
+  It runs right after the house rules for the reason those run first: removing
+  a duplicate moves code between files, which changes what CRAP, twin and
+  iceberg measure behind it.
+
+  There was nothing to remove. `core/src` has 34 units of 25 nodes or more and
+  no two of them are exact or near copies -- 0 groups, and still 0 at
+  dry4rust's default floor of 10. The baseline records 0 groups, so the first
+  copy a change adds fails the gate.
+- CI installs `cargo-dry4rust` beside the other stage 2 tools.
+
+### Changed
+- **stern4rust 0.14's twenty-two rules all apply**, with nothing skipped,
+  nothing unconfigured and nothing baselined. The one rule this repository
+  broke was `test-file-structure`, which now wants consecutive constants at
+  the top of a test file packed without blank lines between them: thirteen
+  offences, the cfg-split `SHELL` / `SHELL_FLAG` pairs in four core test files
+  and the two canned reports in `xtask`'s crap gate tests. Whitespace only.
+  `returned-mutations` already held: there is no `&mut` parameter anywhere
+  under `core/src` or `xtask/src`.
+
+### Fixed
+- The justfile's stage 2 comment described grip4rust's gates, including a
+  self-analysis gate this repository has never had. It now names the five it
+  runs.
+- `docs/IMPLEMENTED-FEATURES.md` carried a stale "Unreleased" section claiming
+  twenty-one rules and a two-line header. It is now the 0.6.1 section, with
+  twenty-two rules and the three-line header `docs/header.txt` actually holds.
+
 ## [0.6.0] - 2026-08-24
 
 How the gates are run, and where the crate lives. No runner behaviour changed:
