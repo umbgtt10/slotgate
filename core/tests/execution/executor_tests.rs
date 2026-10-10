@@ -22,13 +22,10 @@ use std::time::Instant;
 // platform rather than skipping them off Windows.
 #[cfg(windows)]
 const SHELL: &str = "cmd.exe";
-
 #[cfg(not(windows))]
 const SHELL: &str = "sh";
-
 #[cfg(windows)]
 const SHELL_FLAG: &str = "/C";
-
 #[cfg(not(windows))]
 const SHELL_FLAG: &str = "-c";
 

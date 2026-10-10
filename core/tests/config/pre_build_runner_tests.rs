@@ -12,13 +12,10 @@ use std::fs;
 // platform, rather than skipping them off Windows and calling that coverage.
 #[cfg(windows)]
 const SHELL: &str = "cmd.exe";
-
 #[cfg(not(windows))]
 const SHELL: &str = "sh";
-
 #[cfg(windows)]
 const SHELL_FLAG: &str = "/C";
-
 #[cfg(not(windows))]
 const SHELL_FLAG: &str = "-c";
 
