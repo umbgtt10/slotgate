@@ -2,6 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use crate::config::config_failure::ConfigFailure;
 use crate::config::gate_args::GateArgs;
 use crate::config::pre_build_runner::PreBuildRunner;
 
@@ -25,7 +26,7 @@ pub struct PreBuildResolver;
 impl PreBuildResolver {
     /// Without a pre-build program the arguments pass through untouched.
     /// With one, a discovered test binary replaces `program`/`program_args`.
-    pub async fn resolve(args: &GateArgs) -> Result<GateArgs, String> {
+    pub async fn resolve(args: &GateArgs) -> Result<GateArgs, ConfigFailure> {
         let Some(pre_build_program) = &args.pre_build_program else {
             return Ok(args.clone());
         };

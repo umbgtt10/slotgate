@@ -19,6 +19,14 @@ library is not: one `pub(crate)` method is gone and a constructor is replaced.
   free list, to `take`. A slot can still only be returned by the guard that
   took it, and the pool's free list stays private. For stern4rust's coming
   `public-or-private` rule: a method is `pub` or private.
+- The configuration steps fail with `config::config_failure::ConfigFailure`
+  rather than a `String`: `JobSource::apply` and `resolve`,
+  `PreBuildResolver::resolve`, `PreBuildRunner::run`, `RustFileFinder::under`
+  and `TestPathScanner::scan`. A variant per way a run's configuration fails,
+  each printing exactly what the run printed before; a pre-build failure carries
+  its `PRE-BUILD FAILED` label itself rather than the runner adding it. For
+  stern4rust's coming `typed-errors` rule: a library's public functions fail
+  with an error type of their own.
 
 ## [0.6.1] - 2026-10-10
 

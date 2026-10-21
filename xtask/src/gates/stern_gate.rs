@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::gates::gate::Gate;
+use crate::gates::gate_failure::GateFailure;
 use crate::process::command_runner::CommandRunner;
 
 const BINARY: &str = "cargo-stern4rust";
@@ -33,11 +34,9 @@ impl Gate for SternGate<'_> {
         String::from("House rules")
     }
 
-    fn run(&self) -> Result<(), String> {
+    fn run(&self) -> Result<(), GateFailure> {
         if !self.runner.is_available(BINARY) {
-            return Err(format!(
-                "{BINARY} is not installed -- run: cargo install {BINARY}"
-            ));
+            return Err(GateFailure::NotInstalled(String::from(BINARY)));
         }
 
         let mut args = vec![
@@ -55,8 +54,10 @@ impl Gate for SternGate<'_> {
         // codebase.
         match self.runner.run_streaming("cargo", &args)? {
             Some(0) => Ok(()),
-            Some(RULE_BROKEN) => Err(String::from("a house coding rule was broken")),
-            code => Err(format!("could not run, exit code {code:?}")),
+            Some(RULE_BROKEN) => Err(GateFailure::Found(String::from(
+                "a house coding rule was broken",
+            ))),
+            code => Err(GateFailure::CouldNotRun(code)),
         }
     }
 }

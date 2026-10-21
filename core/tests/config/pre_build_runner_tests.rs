@@ -53,7 +53,7 @@ async fn run_returns_an_error_when_the_command_exits_nonzero() {
     // Assert -- and specifically that the command ran and reported, rather than
     // failing to launch. While this named cmd.exe on every platform, a Unix run
     // satisfied `is_err()` by not finding the shell at all.
-    let message = result.expect_err("a non-zero exit is an error");
+    let message = result.expect_err("a non-zero exit is an error").to_string();
     assert!(!message.contains("failed to spawn"), "{message}");
 }
 

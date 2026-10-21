@@ -2,6 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use crate::config::config_failure::ConfigFailure;
 use crate::config::module_path::ModulePath;
 use crate::config::rust_file_finder::RustFileFinder;
 use crate::config::test_name_reader::TestNameReader;
@@ -25,16 +26,19 @@ use std::path::PathBuf;
 pub struct TestPathScanner;
 
 impl TestPathScanner {
-    pub fn scan(roots: &[PathBuf]) -> Result<Vec<String>, String> {
+    pub fn scan(roots: &[PathBuf]) -> Result<Vec<String>, ConfigFailure> {
         let mut names = Vec::new();
         for root in roots {
             if !root.exists() {
-                return Err(format!("--jobs-path {} does not exist", root.display()));
+                return Err(ConfigFailure::JobsPathMissing(root.display().to_string()));
             }
             for file in RustFileFinder::under(root)? {
                 let module = ModulePath::of(root, &file);
-                let contents = read_to_string(&file)
-                    .map_err(|error| format!("{} could not be read: {error}", file.display()))?;
+                let contents =
+                    read_to_string(&file).map_err(|error| ConfigFailure::Unreadable {
+                        path: file.display().to_string(),
+                        reason: error.to_string(),
+                    })?;
                 names.extend(
                     TestNameReader::names_in(&contents)
                         .into_iter()
@@ -43,10 +47,7 @@ impl TestPathScanner {
             }
         }
         if names.is_empty() {
-            return Err(format!(
-                "--jobs-path found no tests under {}",
-                Self::listed(roots)
-            ));
+            return Err(ConfigFailure::NoTests(Self::listed(roots)));
         }
         names.sort();
         names.dedup();

@@ -26,7 +26,6 @@ impl GateRunner {
         // which is what lets the two join.
         let effective_args = match PreBuildResolver::resolve(&args)
             .await
-            .map_err(|error| format!("PRE-BUILD FAILED: {error}"))
             .and_then(JobSource::apply)
         {
             Ok(effective_args) => effective_args,

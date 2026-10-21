@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 pub mod compiler_artifact_parser;
+pub mod config_failure;
 pub mod gate_args;
 pub mod job_list_builder;
 pub mod job_source;

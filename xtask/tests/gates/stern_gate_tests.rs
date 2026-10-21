@@ -70,7 +70,7 @@ fn run_with_exit_code_one_reports_a_failure_to_run() {
     let result = gate(&runner).run();
 
     // Assert
-    assert!(result.is_err_and(|error| error.contains("could not run")));
+    assert!(result.is_err_and(|error| error.to_string().contains("could not run")));
 }
 
 // 2 is a rule broken and 1 is the tool failing to start. Collapsing them would
@@ -84,7 +84,10 @@ fn run_with_exit_code_two_reports_a_broken_rule() {
     let result = gate(&runner).run();
 
     // Assert
-    assert_eq!(result, Err(String::from("a house coding rule was broken")));
+    assert_eq!(
+        result.map_err(|failure| failure.to_string()),
+        Err(String::from("a house coding rule was broken"))
+    );
 }
 
 #[test]
@@ -96,5 +99,7 @@ fn run_with_the_tool_missing_returns_an_install_hint() {
     let result = gate(&runner).run();
 
     // Assert
-    assert!(result.is_err_and(|error| error.contains("cargo install cargo-stern4rust")));
+    assert!(
+        result.is_err_and(|error| error.to_string().contains("cargo install cargo-stern4rust"))
+    );
 }

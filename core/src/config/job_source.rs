@@ -2,6 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use crate::config::config_failure::ConfigFailure;
 use crate::config::gate_args::GateArgs;
 use crate::config::test_path_scanner::TestPathScanner;
 use std::fs::read_to_string;
@@ -28,12 +29,12 @@ impl JobSource {
     // stated. Returned whole rather than as a bare list so the caller keeps the
     // shape it already has for the pre-build step, and so nothing downstream
     // has to know there was ever more than one way to name a job.
-    pub fn apply(args: GateArgs) -> Result<GateArgs, String> {
+    pub fn apply(args: GateArgs) -> Result<GateArgs, ConfigFailure> {
         let jobs = Self::resolve(&args)?;
         Ok(GateArgs { jobs, ..args })
     }
 
-    pub fn resolve(args: &GateArgs) -> Result<Vec<String>, String> {
+    pub fn resolve(args: &GateArgs) -> Result<Vec<String>, ConfigFailure> {
         let stated: Vec<&str> = [
             (!args.jobs.is_empty()).then_some("--jobs"),
             (!args.jobs_paths.is_empty()).then_some("--jobs-path"),
@@ -47,10 +48,9 @@ impl JobSource {
             ["--jobs"] => Ok(args.jobs.clone()),
             ["--jobs-path"] => TestPathScanner::scan(&args.jobs_paths),
             ["--jobs-file"] => Self::read(&Self::file_path_of(args)),
-            [] => Err("no jobs to run; pass --jobs, --jobs-path or --jobs-file".to_string()),
-            several => Err(format!(
-                "{} were all given; state the job list once",
-                several.join(" and ")
+            [] => Err(ConfigFailure::NoJobs),
+            several => Err(ConfigFailure::SeveralJobLists(
+                several.iter().map(|stated| (*stated).to_string()).collect(),
             )),
         }
     }
@@ -74,9 +74,11 @@ impl JobSource {
     // nothing runs zero tests and exits 0, so the job is reported as passed.
     // `etheram-ibft` did exactly that on its first run: one byzantine cluster
     // test "passing" in 0.07 seconds while its siblings took fifty.
-    fn read(path: &str) -> Result<Vec<String>, String> {
-        let contents = read_to_string(path)
-            .map_err(|error| format!("--jobs-file {path} could not be read: {error}"))?;
+    fn read(path: &str) -> Result<Vec<String>, ConfigFailure> {
+        let contents = read_to_string(path).map_err(|error| ConfigFailure::JobsFileUnreadable {
+            path: path.to_string(),
+            reason: error.to_string(),
+        })?;
         let names: Vec<String> = contents
             .strip_prefix('\u{feff}')
             .unwrap_or(&contents)
@@ -86,7 +88,7 @@ impl JobSource {
             .map(str::to_string)
             .collect();
         if names.is_empty() {
-            return Err(format!("--jobs-file {path} names no jobs"));
+            return Err(ConfigFailure::JobsFileEmpty(path.to_string()));
         }
         Ok(names)
     }

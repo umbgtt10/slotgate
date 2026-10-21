@@ -84,7 +84,7 @@ fn run_with_exit_code_one_reports_duplication_beyond_the_baseline() {
 
     // Assert
     assert_eq!(
-        result,
+        result.map_err(|failure| failure.to_string()),
         Err(String::from(
             "duplication was added beyond /repo/dry4rust-baseline.json"
         ))
@@ -102,7 +102,10 @@ fn run_with_exit_code_two_reports_the_exit_code() {
     let result = gate(&runner).run();
 
     // Assert
-    assert_eq!(result, Err(String::from("exit code Some(2)")));
+    assert_eq!(
+        result.map_err(|failure| failure.to_string()),
+        Err(String::from("exit code Some(2)"))
+    );
 }
 
 // A tool killed by a signal has no exit code at all. That is not a clean scan.
@@ -115,7 +118,10 @@ fn run_with_no_exit_code_reports_the_missing_exit_code() {
     let result = gate(&runner).run();
 
     // Assert
-    assert_eq!(result, Err(String::from("exit code None")));
+    assert_eq!(
+        result.map_err(|failure| failure.to_string()),
+        Err(String::from("exit code None"))
+    );
 }
 
 #[test]
@@ -140,7 +146,7 @@ fn run_with_the_tool_missing_returns_an_install_hint() {
 
     // Assert
     assert_eq!(
-        result,
+        result.map_err(|failure| failure.to_string()),
         Err(String::from(
             "cargo-dry4rust is not installed -- run: cargo install cargo-dry4rust"
         ))

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::config::compiler_artifact_parser::CompilerArtifactParser;
+use crate::config::config_failure::ConfigFailure;
 use tokio::process::Command;
 
 pub struct PreBuildRunner;
@@ -12,18 +13,18 @@ impl PreBuildRunner {
         program: &str,
         args: &[String],
         target_name: Option<&str>,
-    ) -> Result<Option<String>, String> {
+    ) -> Result<Option<String>, ConfigFailure> {
         let output = Command::new(program)
             .args(args)
             .output()
             .await
-            .map_err(|error| format!("failed to spawn pre-build command: {error}"))?;
+            .map_err(|error| ConfigFailure::PreBuildNotSpawned(error.to_string()))?;
 
         if !output.status.success() {
-            return Err(format!(
-                "pre-build command exited with failure: {:?}",
+            return Err(ConfigFailure::PreBuildFailed(format!(
+                "{:?}",
                 output.status
-            ));
+            )));
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
