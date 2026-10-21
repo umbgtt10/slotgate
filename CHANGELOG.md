@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+The command line, output, exit codes, slots and port ranges are unchanged. The
+library is not: one `pub(crate)` method is gone and a constructor is replaced.
+
+### Changed
+- A `SlotGuard` takes its slot and gives it back itself. `SlotGuard::take`,
+  public with tests of its own, claims the first free slot from the free list
+  it is handed and returns it there when dropped; it replaces the `pub(crate)`
+  `SlotGuard::new`, and `SlotPool::release`, which only the guard called, is
+  gone. `SlotPool::acquire` waits for a permit and hands it, with the pool's
+  free list, to `take`. A slot can still only be returned by the guard that
+  took it, and the pool's free list stays private. For stern4rust's coming
+  `public-or-private` rule: a method is `pub` or private.
+
 ## [0.6.1] - 2026-10-10
 
 How the gates are run, again; nothing about the runner. Same CLI, same output,

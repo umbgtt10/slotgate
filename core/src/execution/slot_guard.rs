@@ -2,19 +2,25 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::execution::slot_pool::SlotPool;
+use std::collections::VecDeque;
+use std::sync::Mutex;
 use tokio::sync::SemaphorePermit;
 
 pub struct SlotGuard<'a> {
-    pool: &'a SlotPool,
+    free_slots: &'a Mutex<VecDeque<usize>>,
     slot_index: usize,
     _permit: SemaphorePermit<'a>,
 }
 
 impl<'a> SlotGuard<'a> {
-    pub(crate) fn new(pool: &'a SlotPool, slot_index: usize, permit: SemaphorePermit<'a>) -> Self {
+    pub fn take(free_slots: &'a Mutex<VecDeque<usize>>, permit: SemaphorePermit<'a>) -> Self {
+        let slot_index = free_slots
+            .lock()
+            .expect("free_slots lock poisoned")
+            .pop_front()
+            .expect("a semaphore permit implies a free slot is available");
         Self {
-            pool,
+            free_slots,
             slot_index,
             _permit: permit,
         }
@@ -27,6 +33,9 @@ impl<'a> SlotGuard<'a> {
 
 impl Drop for SlotGuard<'_> {
     fn drop(&mut self) {
-        self.pool.release(self.slot_index);
+        self.free_slots
+            .lock()
+            .expect("free_slots lock poisoned")
+            .push_back(self.slot_index);
     }
 }

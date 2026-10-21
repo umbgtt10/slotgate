@@ -26,19 +26,6 @@ impl SlotPool {
             .acquire()
             .await
             .expect("slot pool semaphore should never be closed");
-        let slot_index = self
-            .free_slots
-            .lock()
-            .expect("free_slots lock poisoned")
-            .pop_front()
-            .expect("a semaphore permit implies a free slot is available");
-        SlotGuard::new(self, slot_index, permit)
-    }
-
-    pub(crate) fn release(&self, slot_index: usize) {
-        self.free_slots
-            .lock()
-            .expect("free_slots lock poisoned")
-            .push_back(slot_index);
+        SlotGuard::take(&self.free_slots, permit)
     }
 }

@@ -2,8 +2,12 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use slotgate::execution::slot_guard::SlotGuard;
 use slotgate::execution::slot_pool::SlotPool;
+use std::collections::VecDeque;
+use std::sync::Mutex;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 use tokio::time::timeout;
 
 #[tokio::test]
@@ -29,6 +33,23 @@ async fn a_held_guard_keeps_its_slot_out_of_circulation() {
             .is_ok(),
         "the slot must become available once the guard drops"
     );
+}
+
+// Only the guard that took a slot can put it back, so a slot is never handed
+// to two jobs at once.
+#[tokio::test]
+async fn drop_of_a_taken_guard_puts_its_slot_back_on_the_free_list() {
+    // Arrange
+    let free_slots = Mutex::new(VecDeque::from([3, 5]));
+    let semaphore = Semaphore::new(1);
+    let permit = semaphore.acquire().await.expect("an open semaphore");
+    let guard = SlotGuard::take(&free_slots, permit);
+
+    // Act
+    drop(guard);
+
+    // Assert
+    assert_eq!(*free_slots.lock().unwrap(), VecDeque::from([5, 3]));
 }
 
 #[tokio::test]
@@ -97,4 +118,19 @@ async fn slot_index_reports_the_same_slot_on_every_call() {
 
     // Assert
     assert_eq!(first_read, second_read);
+}
+
+#[tokio::test]
+async fn take_claims_the_first_free_slot() {
+    // Arrange
+    let free_slots = Mutex::new(VecDeque::from([3, 5]));
+    let semaphore = Semaphore::new(1);
+    let permit = semaphore.acquire().await.expect("an open semaphore");
+
+    // Act
+    let guard = SlotGuard::take(&free_slots, permit);
+
+    // Assert
+    assert_eq!(guard.slot_index(), 3);
+    assert_eq!(*free_slots.lock().unwrap(), VecDeque::from([5]));
 }
