@@ -10,16 +10,19 @@ use slotgate::ports::port_range_allocator::PortRangeAllocator;
 use std::collections::BTreeSet;
 use std::env::temp_dir;
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::time::Instant;
 
 // A shell is the portable way to exit with a chosen code and to read an
 // environment variable back out -- just not the same shell, and not the same
 // variable syntax. Selecting both here keeps every test running on every
 // platform rather than skipping them off Windows.
+// Long enough to end a job that waits for ever, and no shorter: a pass never
+// waits for it.
+const PATIENCE: Duration = Duration::from_secs(120);
 #[cfg(windows)]
 const SHELL: &str = "cmd.exe";
 #[cfg(not(windows))]
@@ -39,15 +42,19 @@ fn echo_variable(name: &str) -> String {
     format!("echo ${name}")
 }
 
-fn new_executor(max_parallel: usize, log_dir: PathBuf) -> Executor {
+fn executor_with_timeout(max_parallel: usize, timeout: Duration, log_dir: PathBuf) -> Executor {
     let port_allocator = PortRangeAllocator::new(32000, 50);
     let job_runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
+        timeout,
         log_dir,
     );
     Executor::new(max_parallel, port_allocator, job_runner)
+}
+
+fn new_executor(max_parallel: usize, log_dir: PathBuf) -> Executor {
+    executor_with_timeout(max_parallel, Duration::from_secs(10), log_dir)
 }
 
 fn quick_job(name: &str, exit_code: u32) -> Job {
@@ -58,27 +65,40 @@ fn quick_job(name: &str, exit_code: u32) -> Job {
     }
 }
 
-fn shell_args(script: &str) -> Vec<String> {
-    vec![String::from(SHELL_FLAG), String::from(script)]
-}
-
-// Sleeping is the one thing `cmd.exe` cannot do without help, so Windows takes
-// a different program here rather than a different script.
+// A job that leaves its mark in the meeting point and waits until `together`
+// marks are there. Waiting is the one thing `cmd.exe` cannot do without help,
+// so Windows takes PowerShell rather than a different script.
 #[cfg(windows)]
-fn sleep_command(millis: u32) -> (String, Vec<String>) {
-    (
-        String::from("powershell"),
-        vec![
+fn rendezvous_job(name: &str, meeting_point: &Path, together: usize) -> Job {
+    let dir = meeting_point.display();
+    Job {
+        name: String::from(name),
+        program: String::from("powershell"),
+        args: vec![
+            String::from("-NoProfile"),
             String::from("-Command"),
-            format!("Start-Sleep -Milliseconds {millis}"),
+            format!(
+                "New-Item -ItemType File -Force -Path '{dir}\\{name}' | Out-Null; \
+                 while ((Get-ChildItem -LiteralPath '{dir}').Count -lt {together}) {{ Start-Sleep -Milliseconds 50 }}"
+            ),
         ],
-    )
+    }
 }
 
 #[cfg(not(windows))]
-fn sleep_command(millis: u32) -> (String, Vec<String>) {
-    let seconds = f64::from(millis) / 1000.0;
-    (String::from(SHELL), shell_args(&format!("sleep {seconds}")))
+fn rendezvous_job(name: &str, meeting_point: &Path, together: usize) -> Job {
+    let dir = meeting_point.display();
+    Job {
+        name: String::from(name),
+        program: String::from(SHELL),
+        args: shell_args(&format!(
+            "touch '{dir}/{name}'; while [ $(ls '{dir}' | wc -l) -lt {together} ]; do sleep 0.05; done"
+        )),
+    }
+}
+
+fn shell_args(script: &str) -> Vec<String> {
+    vec![String::from(SHELL_FLAG), String::from(script)]
 }
 
 fn temp_log_dir(test_name: &str) -> PathBuf {
@@ -124,38 +144,6 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
             outcome.job_name
         );
     }
-}
-
-#[tokio::test]
-async fn run_all_bounds_wall_clock_time_by_max_parallel() {
-    // Arrange
-    let executor = new_executor(4, temp_log_dir("bounds_wall_clock"));
-    let sleepy_job = |name: &str| {
-        let (program, args) = sleep_command(500);
-        Job {
-            name: String::from(name),
-            program,
-            args,
-        }
-    };
-    let jobs = vec![
-        sleepy_job("j1"),
-        sleepy_job("j2"),
-        sleepy_job("j3"),
-        sleepy_job("j4"),
-    ];
-
-    // Act
-    let started = Instant::now();
-    let outcomes = executor.run_all(jobs, |_| {}).await;
-    let elapsed = started.elapsed();
-
-    // Assert
-    assert_eq!(outcomes.len(), 4);
-    assert!(
-        elapsed < Duration::from_secs(5),
-        "4 jobs at max_parallel=4 should overlap heavily, took {elapsed:?}"
-    );
 }
 
 #[tokio::test]
@@ -239,4 +227,28 @@ async fn run_all_returns_one_outcome_per_job() {
 
     // Assert
     assert_eq!(outcomes.len(), 3);
+}
+
+// Four jobs that can only finish together: each leaves its mark and waits until
+// all four are there. Run at once, as max_parallel=4 allows, they meet however
+// slowly the machine starts a process; run one at a time, the first would wait
+// for the others for ever and the runner's timeout would end it. Time bounds
+// only the failure, never the pass.
+#[tokio::test]
+async fn run_all_runs_as_many_jobs_at_once_as_max_parallel() {
+    // Arrange
+    let meeting_point = temp_log_dir("meeting_point");
+    fs::create_dir_all(&meeting_point).expect("create the meeting point");
+    let executor = executor_with_timeout(4, PATIENCE, temp_log_dir("runs_max_parallel_at_once"));
+    let jobs = ["j1", "j2", "j3", "j4"]
+        .into_iter()
+        .map(|name| rendezvous_job(name, &meeting_point, 4))
+        .collect();
+
+    // Act
+    let outcomes = executor.run_all(jobs, |_| {}).await;
+
+    // Assert
+    let statuses: Vec<JobStatus> = outcomes.iter().map(|outcome| outcome.status).collect();
+    assert_eq!(statuses, vec![JobStatus::Passed; 4]);
 }
