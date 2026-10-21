@@ -28,16 +28,6 @@ impl ModulePath {
         segments.join("::")
     }
 
-    // A root that is itself a file has no directories above it, so its own name
-    // is all there is to go on.
-    fn relative<'a>(root: &Path, path: &'a Path) -> &'a Path {
-        if root == path {
-            Path::new(path.file_name().unwrap_or_default())
-        } else {
-            path.strip_prefix(root).unwrap_or(path)
-        }
-    }
-
     fn directories(relative: &Path) -> Vec<String> {
         relative
             .parent()
@@ -48,5 +38,15 @@ impl ModulePath {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    // A root that is itself a file has no directories above it, so its own name
+    // is all there is to go on.
+    fn relative<'a>(root: &Path, path: &'a Path) -> &'a Path {
+        if root == path {
+            Path::new(path.file_name().unwrap_or_default())
+        } else {
+            path.strip_prefix(root).unwrap_or(path)
+        }
     }
 }

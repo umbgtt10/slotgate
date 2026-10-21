@@ -29,20 +29,16 @@ impl RunSummary {
         summary
     }
 
-    pub fn total(&self) -> usize {
-        self.passed + self.failed + self.timed_out
-    }
-
-    pub fn is_success(&self) -> bool {
-        self.failed == 0 && self.timed_out == 0
-    }
-
     pub fn exit_code(&self) -> ExitCode {
         if self.is_success() {
             ExitCode::SUCCESS
         } else {
             ExitCode::FAILURE
         }
+    }
+
+    pub fn is_success(&self) -> bool {
+        self.failed == 0 && self.timed_out == 0
     }
 
     pub fn render(&self) -> String {
@@ -53,5 +49,9 @@ impl RunSummary {
             self.timed_out,
             self.total()
         )
+    }
+
+    pub fn total(&self) -> usize {
+        self.passed + self.failed + self.timed_out
     }
 }

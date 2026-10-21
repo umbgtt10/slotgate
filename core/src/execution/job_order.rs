@@ -43,13 +43,6 @@ impl JobOrder {
         Self::shuffle(jobs, seed)
     }
 
-    fn seed_from_clock() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|elapsed| elapsed.as_nanos() as u64)
-            .unwrap_or_default()
-    }
-
     // Fisher-Yates, walked from the end, so every permutation is equally likely
     // and the whole list moves rather than drifting.
     pub fn shuffle(jobs: Vec<Job>, seed: u64) -> Vec<Job> {
@@ -68,5 +61,12 @@ impl JobOrder {
         mixed = (mixed ^ (mixed >> 30)).wrapping_mul(Self::MIX_A);
         mixed = (mixed ^ (mixed >> 27)).wrapping_mul(Self::MIX_B);
         mixed ^ (mixed >> 31)
+    }
+
+    fn seed_from_clock() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos() as u64)
+            .unwrap_or_default()
     }
 }

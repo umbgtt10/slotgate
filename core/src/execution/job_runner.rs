@@ -45,27 +45,6 @@ impl JobRunner {
         }
     }
 
-    // A job that ran nothing did not pass.
-    //
-    // `cargo test --exact` given a name that matches no test runs zero of them
-    // and exits 0, so a job naming a test that does not exist was reported as a
-    // pass. That is the worst answer a gate can give, and it is reachable three
-    // ways: a stale `--jobs` list, a `--jobs-file` whose first name carries a
-    // byte order mark, and now a `--jobs-path` scan that reads a name the
-    // compiled binary does not have. `etheram-ibft` hit the second and the
-    // summary said 366 passed.
-    //
-    // The check is the libtest line rather than the exit code, because the exit
-    // code is exactly what is wrong. This tool already assumes libtest wherever
-    // it discovers a test binary for itself, so reading its output is no new
-    // assumption -- and a program that never prints the line is unaffected.
-    fn verdict_for(stdout_path: &Path) -> JobStatus {
-        match read_to_string(stdout_path) {
-            Ok(output) if output.contains(NO_TESTS_MARKER) => JobStatus::Failed,
-            _ => JobStatus::Passed,
-        }
-    }
-
     pub async fn run(&self, job: &Job, port_range: &PortRange) -> JobOutcome {
         let job_dir = self.log_dir.join(FilesystemSafeName::sanitize(&job.name));
         create_dir_all(&job_dir).expect("failed to create job log directory");
@@ -103,6 +82,27 @@ impl JobRunner {
             duration: started.elapsed(),
             stdout_path,
             stderr_path,
+        }
+    }
+
+    // A job that ran nothing did not pass.
+    //
+    // `cargo test --exact` given a name that matches no test runs zero of them
+    // and exits 0, so a job naming a test that does not exist was reported as a
+    // pass. That is the worst answer a gate can give, and it is reachable three
+    // ways: a stale `--jobs` list, a `--jobs-file` whose first name carries a
+    // byte order mark, and now a `--jobs-path` scan that reads a name the
+    // compiled binary does not have. `etheram-ibft` hit the second and the
+    // summary said 366 passed.
+    //
+    // The check is the libtest line rather than the exit code, because the exit
+    // code is exactly what is wrong. This tool already assumes libtest wherever
+    // it discovers a test binary for itself, so reading its output is no new
+    // assumption -- and a program that never prints the line is unaffected.
+    fn verdict_for(stdout_path: &Path) -> JobStatus {
+        match read_to_string(stdout_path) {
+            Ok(output) if output.contains(NO_TESTS_MARKER) => JobStatus::Failed,
+            _ => JobStatus::Passed,
         }
     }
 }

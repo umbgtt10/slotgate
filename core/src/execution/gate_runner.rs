@@ -60,6 +60,10 @@ impl GateRunner {
         Executor::new(args.max_parallel, port_allocator, job_runner)
     }
 
+    fn print_outcome_as_it_completes(outcome: &JobOutcome) {
+        println!("{}", OutcomeLine::render(outcome));
+    }
+
     fn print_plan(args: &GateArgs, job_count: usize) {
         println!(
             "SLOTGATE — {} jobs, max_parallel={}, ports {}-{} per slot",
@@ -69,9 +73,5 @@ impl GateRunner {
             args.port_range_base as u32 + args.port_range_size as u32 - 1,
         );
         println!();
-    }
-
-    fn print_outcome_as_it_completes(outcome: &JobOutcome) {
-        println!("{}", OutcomeLine::render(outcome));
     }
 }
