@@ -22,10 +22,9 @@ three types take time through ports their constructors are handed.
   `WallClockSeed` reads it off the wall clock as before. `JobRunner::new`
   takes a clock, `JobOrder::new` a seed source, and `GateRunner::new` both,
   whose `run` and `apply` are now methods; `main.rs` builds the real ones,
-  the clock from `--timeout-secs`. Two new tests drive a fake clock -- a job
-  timed out when the clock says, a duration the clock measured -- and one a
-  fake seed, the order an unseeded run draws. No test was removed. One
-  assertion changed: `run_enforces_a_timeout_and_reports_timed_out` no longer
+  the clock from `--timeout-secs`. A new test drives a fake clock to the
+  duration it measured, and one a fake seed, the order an unseeded run draws.
+  No test was removed. One assertion changed: `run_enforces_a_timeout_and_reports_timed_out` no longer
   sets a 300 ms timeout and asserts the run returned within ten seconds of
   real time; its clock says the time is up, and it asserts the job was
   stopped -- the marker it prints after its 30 s sleep is not in its log.

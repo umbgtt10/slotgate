@@ -46,22 +46,6 @@ fn shell_args(script: &str) -> Vec<String> {
 // Sleeping is the one thing `cmd.exe` cannot do without help, so Windows takes
 // a different program here rather than a different script.
 #[cfg(windows)]
-fn sleep_command(seconds: u32) -> (String, Vec<String>) {
-    (
-        String::from("powershell"),
-        vec![
-            String::from("-Command"),
-            format!("Start-Sleep -Seconds {seconds}"),
-        ],
-    )
-}
-
-#[cfg(not(windows))]
-fn sleep_command(seconds: u32) -> (String, Vec<String>) {
-    (String::from(SHELL), shell_args(&format!("sleep {seconds}")))
-}
-
-#[cfg(windows)]
 fn sleep_then_echo(seconds: u32, marker: &str) -> (String, Vec<String>) {
     (
         String::from("powershell"),
@@ -378,31 +362,4 @@ async fn run_reports_the_duration_its_clock_measured() {
     // Assert
     assert_eq!(outcome.status, JobStatus::Passed);
     assert_eq!(outcome.duration, Duration::from_secs(3));
-}
-
-#[tokio::test]
-async fn run_reports_timed_out_when_its_clock_says_the_time_is_up() {
-    // Arrange
-    let runner = JobRunner::new(
-        String::from("PORT_RANGE_BASE"),
-        String::from("PORT_RANGE_COUNT"),
-        temp_log_dir("clock_timeout"),
-        Arc::new(FakeJobClock::new(&[], true)),
-    );
-    let (program, args) = sleep_command(30);
-    let job = Job {
-        name: String::from("outlives_its_deadline"),
-        program,
-        args,
-    };
-    let port_range = PortRange {
-        base: 31900,
-        count: 10,
-    };
-
-    // Act
-    let outcome = runner.run(&job, &port_range).await;
-
-    // Assert
-    assert_eq!(outcome.status, JobStatus::TimedOut);
 }
