@@ -10,7 +10,7 @@ use std::time::Duration;
 use tokio::sync::Semaphore;
 use tokio::time::timeout;
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn a_held_guard_keeps_its_slot_out_of_circulation() {
     // Arrange -- the permit lives in the guard, so the slot must stay taken
     // for the guard's whole lifetime. Releasing early would let two jobs bind
@@ -52,7 +52,7 @@ async fn drop_of_a_taken_guard_puts_its_slot_back_on_the_free_list() {
     assert_eq!(*free_slots.lock().unwrap(), VecDeque::from([5, 3]));
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn drop_returns_the_guards_own_slot_and_not_merely_some_slot() {
     // Arrange -- three slots taken, so 0, 1 and 2 are all out. Releasing the
     // middle one is what distinguishes returning the right index from

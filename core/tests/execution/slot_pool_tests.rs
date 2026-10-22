@@ -23,7 +23,7 @@ async fn acquire_returns_a_slot_index_within_bounds() {
     assert!(guard.slot_index() < 4);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn acquiring_beyond_max_parallel_blocks_until_a_release() {
     // Arrange
     let pool = SlotPool::new(1);
@@ -45,7 +45,7 @@ async fn acquiring_beyond_max_parallel_blocks_until_a_release() {
     assert_eq!(second_guard.slot_index(), 0);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn at_most_max_parallel_guards_are_held_simultaneously() {
     // Arrange
     let max_parallel = 3;
@@ -75,7 +75,7 @@ async fn at_most_max_parallel_guards_are_held_simultaneously() {
     assert!(peak.load(Ordering::SeqCst) <= max_parallel);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn slot_is_returned_to_the_pool_when_guard_drops() {
     // Arrange
     let pool = SlotPool::new(1);
