@@ -8,10 +8,13 @@
 // different seeds generally do not. Without the first a failing run cannot be
 // re-run, which is worse than not shuffling at all.
 
+use crate::time::seed_source_tests::FakeSeedSource;
 use slotgate::config::gate_args::GateArgs;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_order::JobOrder;
+use slotgate::time::wall_clock_seed::WallClockSeed;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn args_with(random: bool, seed: Option<u64>) -> GateArgs {
     GateArgs {
@@ -55,7 +58,23 @@ fn apply_with_random_and_a_seed_returns_that_seeds_order() {
     let expected = names(&JobOrder::shuffle(jobs(30), 4242));
 
     // Act
-    let applied = JobOrder::apply(jobs(30), &args_with(true, Some(4242)));
+    let applied = JobOrder::new(Arc::new(FakeSeedSource::new(1)))
+        .apply(jobs(30), &args_with(true, Some(4242)));
+
+    // Assert
+    assert_eq!(names(&applied), expected);
+}
+
+// Without a seed the order is the one the drawn seed gives, and a test can name
+// the seed drawn.
+#[test]
+fn apply_with_random_and_no_seed_shuffles_with_the_seed_it_draws() {
+    // Arrange
+    let expected = names(&JobOrder::shuffle(jobs(30), 4242));
+
+    // Act
+    let applied =
+        JobOrder::new(Arc::new(FakeSeedSource::new(4242))).apply(jobs(30), &args_with(true, None));
 
     // Assert
     assert_eq!(names(&applied), expected);
@@ -68,7 +87,7 @@ fn apply_with_random_and_no_seed_still_returns_every_job() {
     let mut original = names(&jobs(30));
 
     // Act
-    let applied = JobOrder::apply(jobs(30), &args_with(true, None));
+    let applied = JobOrder::new(Arc::new(WallClockSeed)).apply(jobs(30), &args_with(true, None));
 
     // Assert
     let mut sorted = names(&applied);
@@ -84,7 +103,8 @@ fn apply_without_random_returns_the_jobs_untouched() {
     let original = names(&jobs(20));
 
     // Act
-    let applied = JobOrder::apply(jobs(20), &args_with(false, Some(7)));
+    let applied =
+        JobOrder::new(Arc::new(FakeSeedSource::new(1))).apply(jobs(20), &args_with(false, Some(7)));
 
     // Assert
     assert_eq!(names(&applied), original);

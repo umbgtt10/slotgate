@@ -109,7 +109,7 @@ living "in the source tree" -- files belonging to a different package entirely.
 Orchestration lives in the library so it is reachable from integration tests —
 a binary entry point is not.
 
-The three module trees under `core/src/` are mirrored exactly by `core/tests/`, which is
+The four module trees under `core/src/` are mirrored exactly by `core/tests/`, which is
 what `twin4rust` enforces:
 
 | Source | Tests |
@@ -117,6 +117,11 @@ what `twin4rust` enforces:
 | `core/src/config/` | `core/tests/config/` |
 | `core/src/execution/` | `core/tests/execution/` |
 | `core/src/ports/` | `core/tests/ports/` |
+| `core/src/time/` | `core/tests/time/` |
+
+`ports/` is network port ranges. The ports in the other sense -- the traits
+time comes through, `JobClock` and `SeedSource`, and their real adapters -- are
+in `time/`, and `main.rs` hands the real ones to `GateRunner::new`.
 
 ## Orthogonality, trait surface and cognitive complexity
 

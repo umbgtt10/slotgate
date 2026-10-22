@@ -4,8 +4,8 @@
 
 use crate::config::gate_args::GateArgs;
 use crate::execution::job::Job;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
+use crate::time::seed_source::SeedSource;
+use std::sync::Arc;
 
 // The order the jobs are handed to the pool.
 //
@@ -23,21 +23,27 @@ use std::time::UNIX_EPOCH;
 // whose whole job is spawning processes. Nothing here is cryptographic; the
 // requirement is that a seed picks one permutation and picks the same one
 // twice.
-pub struct JobOrder;
+pub struct JobOrder {
+    seeds: Arc<dyn SeedSource>,
+}
 
 impl JobOrder {
     const GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
     const MIX_A: u64 = 0xbf58_476d_1ce4_e5b9;
     const MIX_B: u64 = 0x94d0_49bb_1331_11eb;
 
+    pub fn new(seeds: Arc<dyn SeedSource>) -> Self {
+        Self { seeds }
+    }
+
     // Shuffled only when asked, and the seed is always printed. Without
-    // `--seed` one is drawn from the clock, which is the single place this tool
-    // wants a number nobody chose.
-    pub fn apply(jobs: Vec<Job>, args: &GateArgs) -> Vec<Job> {
+    // `--seed` one is drawn from the seed source -- the wall clock, in a real
+    // run -- which is the single place this tool wants a number nobody chose.
+    pub fn apply(&self, jobs: Vec<Job>, args: &GateArgs) -> Vec<Job> {
         if !args.random {
             return jobs;
         }
-        let seed = args.seed.unwrap_or_else(Self::seed_from_clock);
+        let seed = args.seed.unwrap_or_else(|| self.seeds.draw());
         println!("SLOTGATE — RANDOM ORDER, seed {seed} (replay with --seed {seed})");
         println!();
         Self::shuffle(jobs, seed)
@@ -61,12 +67,5 @@ impl JobOrder {
         mixed = (mixed ^ (mixed >> 30)).wrapping_mul(Self::MIX_A);
         mixed = (mixed ^ (mixed >> 27)).wrapping_mul(Self::MIX_B);
         mixed ^ (mixed >> 31)
-    }
-
-    fn seed_from_clock() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|elapsed| elapsed.as_nanos() as u64)
-            .unwrap_or_default()
     }
 }

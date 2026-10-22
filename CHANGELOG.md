@@ -8,9 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 The command line, output, exit codes, slots and port ranges are unchanged. The
-library is not: one `pub(crate)` method is gone and a constructor is replaced.
+library is not: one `pub(crate)` method is gone, a constructor is replaced, and
+three types take time through ports their constructors are handed.
 
 ### Changed
+- Time reaches the library through two ports in a new `time` module, for
+  stern4rust's coming `injected-time` rule. `JobClock` -- a reading on the
+  clock's own scale and a deadline that resolves once a duration has passed --
+  times a job and races its wait, the race `tokio::time::timeout` made; its
+  adapter `TokioJobClock` is Tokio's clock, with its origin at its first
+  reading. `SeedSource` draws the shuffle's seed when `--seed` is absent;
+  `WallClockSeed` reads it off the wall clock as before. `JobRunner::new`
+  takes a clock, `JobOrder::new` a seed source, and `GateRunner::new` both,
+  whose `run` and `apply` are now methods; `main.rs` hands in the real ones.
+  Two new tests drive a fake clock -- a job timed out when the clock says, a
+  duration the clock measured -- and one a fake seed, the order an unseeded run
+  draws; no test was removed and no assertion changed.
 - A `SlotGuard` takes its slot and gives it back itself. `SlotGuard::take`,
   public with tests of its own, claims the first free slot from the free list
   it is handed and returns it there when dropped; it replaces the `pub(crate)`

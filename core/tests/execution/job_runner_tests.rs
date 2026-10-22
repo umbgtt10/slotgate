@@ -2,13 +2,16 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use crate::time::job_clock_tests::FakeJobClock;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_runner::JobRunner;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::ports::port_range::PortRange;
+use slotgate::time::tokio_job_clock::TokioJobClock;
 use std::env::temp_dir;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -73,6 +76,7 @@ async fn run_a_command_that_exits_nonzero_reports_failed() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("exits_nonzero"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("fails"),
@@ -99,6 +103,7 @@ async fn run_a_command_that_exits_zero_reports_passed() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("exits_zero"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("succeeds"),
@@ -131,6 +136,7 @@ async fn run_a_command_that_reports_running_no_tests_reports_failed() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("ran_nothing"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("matches_nothing"),
@@ -159,6 +165,7 @@ async fn run_a_job_whose_name_contains_double_colons_still_runs_successfully() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("filesystem_safety"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from(
@@ -188,6 +195,7 @@ async fn run_captures_stdout_to_the_returned_path() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("captures_stdout"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("prints_marker"),
@@ -215,6 +223,7 @@ async fn run_enforces_a_timeout_and_reports_timed_out() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_millis(300),
         temp_log_dir("timeout"),
+        Arc::new(TokioJobClock::new()),
     );
     let (program, args) = sleep_command(30);
     let job = Job {
@@ -248,6 +257,7 @@ async fn run_injects_port_range_env_vars_readable_by_the_child() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("env_vars"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("prints_env"),
@@ -280,6 +290,7 @@ async fn run_publishes_the_job_log_directory_to_the_child() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         log_dir.clone(),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("cluster::some_tests::a_case"),
@@ -310,6 +321,7 @@ async fn run_publishes_the_unsanitised_job_name_to_the_child() {
         String::from("PORT_RANGE_COUNT"),
         Duration::from_secs(10),
         temp_log_dir("publishes_job_name"),
+        Arc::new(TokioJobClock::new()),
     );
     let job = Job {
         name: String::from("cluster::some_tests::a_case"),
@@ -327,4 +339,63 @@ async fn run_publishes_the_unsanitised_job_name_to_the_child() {
     // Assert
     let printed = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     assert_eq!(printed.trim(), "cluster::some_tests::a_case");
+}
+
+#[tokio::test]
+async fn run_reports_the_duration_its_clock_measured() {
+    // Arrange
+    let runner = JobRunner::new(
+        String::from("PORT_RANGE_BASE"),
+        String::from("PORT_RANGE_COUNT"),
+        Duration::from_secs(10),
+        temp_log_dir("clock_duration"),
+        Arc::new(FakeJobClock::new(
+            &[Duration::from_secs(10), Duration::from_secs(13)],
+            false,
+        )),
+    );
+    let job = Job {
+        name: String::from("timed"),
+        program: String::from(SHELL),
+        args: shell_args("exit 0"),
+    };
+    let port_range = PortRange {
+        base: 31800,
+        count: 10,
+    };
+
+    // Act
+    let outcome = runner.run(&job, &port_range).await;
+
+    // Assert
+    assert_eq!(outcome.status, JobStatus::Passed);
+    assert_eq!(outcome.duration, Duration::from_secs(3));
+}
+
+#[tokio::test]
+async fn run_reports_timed_out_when_its_clock_says_the_time_is_up() {
+    // Arrange
+    let runner = JobRunner::new(
+        String::from("PORT_RANGE_BASE"),
+        String::from("PORT_RANGE_COUNT"),
+        Duration::from_secs(10),
+        temp_log_dir("clock_timeout"),
+        Arc::new(FakeJobClock::new(&[], true)),
+    );
+    let (program, args) = sleep_command(30);
+    let job = Job {
+        name: String::from("outlives_its_deadline"),
+        program,
+        args,
+    };
+    let port_range = PortRange {
+        base: 31900,
+        count: 10,
+    };
+
+    // Act
+    let outcome = runner.run(&job, &port_range).await;
+
+    // Assert
+    assert_eq!(outcome.status, JobStatus::TimedOut);
 }

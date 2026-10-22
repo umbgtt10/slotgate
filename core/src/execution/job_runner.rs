@@ -7,16 +7,17 @@ use crate::execution::job::Job;
 use crate::execution::job_outcome::JobOutcome;
 use crate::execution::job_status::JobStatus;
 use crate::ports::port_range::PortRange;
+use crate::time::job_clock::JobClock;
 use std::fs::File;
 use std::fs::create_dir_all;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 use tokio::process::Command;
-use tokio::time::timeout;
+use tokio::select;
 
 const NO_TESTS_MARKER: &str = "running 0 tests";
 
@@ -28,6 +29,7 @@ pub struct JobRunner {
     port_env_count_var: String,
     timeout: Duration,
     log_dir: PathBuf,
+    clock: Arc<dyn JobClock>,
 }
 
 impl JobRunner {
@@ -36,12 +38,14 @@ impl JobRunner {
         port_env_count_var: String,
         timeout: Duration,
         log_dir: PathBuf,
+        clock: Arc<dyn JobClock>,
     ) -> Self {
         Self {
             port_env_base_var,
             port_env_count_var,
             timeout,
             log_dir,
+            clock,
         }
     }
 
@@ -63,14 +67,19 @@ impl JobRunner {
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(stderr_file));
 
-        let started = Instant::now();
+        let started = self.clock.now();
         let mut child = command.spawn().expect("failed to spawn job process");
 
-        let status = match timeout(self.timeout, child.wait()).await {
-            Ok(Ok(exit_status)) if exit_status.success() => Self::verdict_for(&stdout_path),
-            Ok(Ok(_)) => JobStatus::Failed,
-            Ok(Err(_)) => JobStatus::Failed,
-            Err(_) => {
+        // The job's wait raced against the clock's deadline, the race
+        // `tokio::time::timeout` makes, on a clock a test can drive.
+        let finished = select! {
+            waited = child.wait() => Some(waited),
+            () = self.clock.deadline(self.timeout) => None,
+        };
+        let status = match finished {
+            Some(Ok(exit_status)) if exit_status.success() => Self::verdict_for(&stdout_path),
+            Some(_) => JobStatus::Failed,
+            None => {
                 let _ = child.kill().await;
                 JobStatus::TimedOut
             }
@@ -79,7 +88,7 @@ impl JobRunner {
         JobOutcome {
             job_name: job.name.clone(),
             status,
-            duration: started.elapsed(),
+            duration: self.clock.now().saturating_sub(started),
             stdout_path,
             stderr_path,
         }

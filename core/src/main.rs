@@ -5,9 +5,14 @@
 use clap::Parser;
 use slotgate::config::gate_args::GateArgs;
 use slotgate::execution::gate_runner::GateRunner;
+use slotgate::time::tokio_job_clock::TokioJobClock;
+use slotgate::time::wall_clock_seed::WallClockSeed;
 use std::process::ExitCode;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    GateRunner::run(GateArgs::parse()).await
+    GateRunner::new(Arc::new(TokioJobClock::new()), Arc::new(WallClockSeed))
+        .run(GateArgs::parse())
+        .await
 }

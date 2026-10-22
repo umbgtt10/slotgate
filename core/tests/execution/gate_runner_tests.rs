@@ -2,12 +2,15 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use crate::time::seed_source_tests::FakeSeedSource;
 use slotgate::config::gate_args::GateArgs;
 use slotgate::execution::gate_runner::GateRunner;
+use slotgate::time::tokio_job_clock::TokioJobClock;
 use std::env::temp_dir;
 use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::sync::Arc;
 
 // A shell is the portable way to exit with a chosen code -- just not the same
 // shell. Selecting it here keeps every test running on every platform rather
@@ -57,6 +60,13 @@ fn args_without_pre_build() -> GateArgs {
 // ExitCode carries no accessor and no PartialEq, so the two renderings are
 // compared instead -- both produced on this platform, so the comparison says
 // what it looks like it says.
+fn gate_runner() -> GateRunner {
+    GateRunner::new(
+        Arc::new(TokioJobClock::new()),
+        Arc::new(FakeSeedSource::new(7)),
+    )
+}
+
 fn shows_as(code: ExitCode, expected: ExitCode) -> bool {
     format!("{code:?}") == format!("{expected:?}")
 }
@@ -75,7 +85,7 @@ async fn run_a_gate_whose_jobs_all_pass_returns_success() {
     let args = args_running("exit 0", &["alpha", "beta"], "all_pass");
 
     // Act
-    let code = GateRunner::run(args).await;
+    let code = gate_runner().run(args).await;
 
     // Assert
     assert!(
@@ -92,7 +102,7 @@ async fn run_a_gate_with_one_failing_job_returns_failure() {
     let args = args_running("exit 1", &["alpha"], "one_fails");
 
     // Act
-    let code = GateRunner::run(args).await;
+    let code = gate_runner().run(args).await;
 
     // Assert
     assert!(

@@ -7,6 +7,7 @@ use slotgate::execution::job::Job;
 use slotgate::execution::job_runner::JobRunner;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::ports::port_range_allocator::PortRangeAllocator;
+use slotgate::time::tokio_job_clock::TokioJobClock;
 use std::collections::BTreeSet;
 use std::env::temp_dir;
 use std::fs;
@@ -49,6 +50,7 @@ fn executor_with_timeout(max_parallel: usize, timeout: Duration, log_dir: PathBu
         String::from("PORT_RANGE_COUNT"),
         timeout,
         log_dir,
+        Arc::new(TokioJobClock::new()),
     );
     Executor::new(max_parallel, port_allocator, job_runner)
 }
