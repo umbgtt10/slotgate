@@ -11,29 +11,26 @@ use tokio::time::Instant;
 use tokio::time::sleep;
 
 // The real clock, and Tokio's, so a test on Tokio's paused clock drives it too.
-// Its scale starts at its first reading, taken inside the port rather than when
-// it is built: building one reads no time.
+// A job's time is up once `limit` has passed. Its scale starts at its first
+// reading, taken inside the port rather than when it is built: building one
+// reads no time.
 pub struct TokioJobClock {
+    limit: Duration,
     origin: OnceLock<Instant>,
 }
 
 impl TokioJobClock {
-    pub fn new() -> Self {
+    pub fn new(limit: Duration) -> Self {
         Self {
+            limit,
             origin: OnceLock::new(),
         }
     }
 }
 
-impl Default for TokioJobClock {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl JobClock for TokioJobClock {
-    fn deadline(&self, after: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(sleep(after))
+    fn deadline(&self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+        Box::pin(sleep(self.limit))
     }
 
     fn now(&self) -> Duration {

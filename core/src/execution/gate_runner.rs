@@ -16,7 +16,6 @@ use crate::time::job_clock::JobClock;
 use crate::time::seed_source::SeedSource;
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::time::Duration;
 
 pub struct GateRunner {
     clock: Arc<dyn JobClock>,
@@ -64,7 +63,6 @@ impl GateRunner {
         let job_runner = JobRunner::new(
             args.port_env_base.clone(),
             args.port_env_count.clone(),
-            Duration::from_secs(args.timeout_secs),
             args.log_dir.clone(),
             Arc::clone(&self.clock),
         );

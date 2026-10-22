@@ -13,7 +13,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 
 // A shell is the portable way to exit with a chosen code, echo a line and read
 // an environment variable back out -- just not the same shell, and not the same
@@ -62,6 +61,25 @@ fn sleep_command(seconds: u32) -> (String, Vec<String>) {
     (String::from(SHELL), shell_args(&format!("sleep {seconds}")))
 }
 
+#[cfg(windows)]
+fn sleep_then_echo(seconds: u32, marker: &str) -> (String, Vec<String>) {
+    (
+        String::from("powershell"),
+        vec![
+            String::from("-Command"),
+            format!("Start-Sleep -Seconds {seconds}; Write-Output {marker}"),
+        ],
+    )
+}
+
+#[cfg(not(windows))]
+fn sleep_then_echo(seconds: u32, marker: &str) -> (String, Vec<String>) {
+    (
+        String::from(SHELL),
+        shell_args(&format!("sleep {seconds}; echo {marker}")),
+    )
+}
+
 fn temp_log_dir(test_name: &str) -> PathBuf {
     let dir = temp_dir().join(format!("slotgate_job_runner_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
@@ -74,9 +92,8 @@ async fn run_a_command_that_exits_nonzero_reports_failed() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("exits_nonzero"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("fails"),
@@ -101,9 +118,8 @@ async fn run_a_command_that_exits_zero_reports_passed() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("exits_zero"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("succeeds"),
@@ -134,9 +150,8 @@ async fn run_a_command_that_reports_running_no_tests_reports_failed() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("ran_nothing"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("matches_nothing"),
@@ -163,9 +178,8 @@ async fn run_a_job_whose_name_contains_double_colons_still_runs_successfully() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("filesystem_safety"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from(
@@ -193,9 +207,8 @@ async fn run_captures_stdout_to_the_returned_path() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("captures_stdout"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("prints_marker"),
@@ -217,15 +230,15 @@ async fn run_captures_stdout_to_the_returned_path() {
 
 #[tokio::test]
 async fn run_enforces_a_timeout_and_reports_timed_out() {
-    // Arrange
+    // Arrange -- the clock says the time is up at once, and the job would print
+    // its marker only after outliving it.
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_millis(300),
         temp_log_dir("timeout"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(FakeJobClock::new(&[], true)),
     );
-    let (program, args) = sleep_command(30);
+    let (program, args) = sleep_then_echo(30, "outlived_its_deadline");
     let job = Job {
         name: String::from("sleeps_too_long"),
         program,
@@ -237,15 +250,14 @@ async fn run_enforces_a_timeout_and_reports_timed_out() {
     };
 
     // Act
-    let started = Instant::now();
     let outcome = runner.run(&job, &port_range).await;
-    let elapsed = started.elapsed();
 
     // Assert
     assert_eq!(outcome.status, JobStatus::TimedOut);
+    let stdout = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     assert!(
-        elapsed < Duration::from_secs(10),
-        "timeout enforcement should return well before the job's own 30s sleep, took {elapsed:?}"
+        !stdout.contains("outlived_its_deadline"),
+        "timeout enforcement should stop the job rather than wait out its 30s sleep"
     );
 }
 
@@ -255,9 +267,8 @@ async fn run_injects_port_range_env_vars_readable_by_the_child() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("env_vars"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("prints_env"),
@@ -288,9 +299,8 @@ async fn run_publishes_the_job_log_directory_to_the_child() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         log_dir.clone(),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("cluster::some_tests::a_case"),
@@ -319,9 +329,8 @@ async fn run_publishes_the_unsanitised_job_name_to_the_child() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("publishes_job_name"),
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
     let job = Job {
         name: String::from("cluster::some_tests::a_case"),
@@ -347,7 +356,6 @@ async fn run_reports_the_duration_its_clock_measured() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("clock_duration"),
         Arc::new(FakeJobClock::new(
             &[Duration::from_secs(10), Duration::from_secs(13)],
@@ -378,7 +386,6 @@ async fn run_reports_timed_out_when_its_clock_says_the_time_is_up() {
     let runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        Duration::from_secs(10),
         temp_log_dir("clock_timeout"),
         Arc::new(FakeJobClock::new(&[], true)),
     );

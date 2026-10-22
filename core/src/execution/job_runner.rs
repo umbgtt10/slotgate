@@ -15,7 +15,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::process::Command;
 use tokio::select;
 
@@ -27,7 +26,6 @@ const JOB_NAME_ENV_VAR: &str = "SLOTGATE_JOB_NAME";
 pub struct JobRunner {
     port_env_base_var: String,
     port_env_count_var: String,
-    timeout: Duration,
     log_dir: PathBuf,
     clock: Arc<dyn JobClock>,
 }
@@ -36,14 +34,12 @@ impl JobRunner {
     pub fn new(
         port_env_base_var: String,
         port_env_count_var: String,
-        timeout: Duration,
         log_dir: PathBuf,
         clock: Arc<dyn JobClock>,
     ) -> Self {
         Self {
             port_env_base_var,
             port_env_count_var,
-            timeout,
             log_dir,
             clock,
         }
@@ -74,7 +70,7 @@ impl JobRunner {
         // `tokio::time::timeout` makes, on a clock a test can drive.
         let finished = select! {
             waited = child.wait() => Some(waited),
-            () = self.clock.deadline(self.timeout) => None,
+            () = self.clock.deadline() => None,
         };
         let status = match finished {
             Some(Ok(exit_status)) if exit_status.success() => Self::verdict_for(&stdout_path),

@@ -121,7 +121,8 @@ what `twin4rust` enforces:
 
 `ports/` is network port ranges. The ports in the other sense -- the traits
 time comes through, `JobClock` and `SeedSource`, and their real adapters -- are
-in `time/`, and `main.rs` hands the real ones to `GateRunner::new`.
+in `time/`, and `main.rs` hands the real ones to `GateRunner::new`, the clock
+built with `--timeout-secs` as its limit.
 
 ## Orthogonality, trait surface and cognitive complexity
 

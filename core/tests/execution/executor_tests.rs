@@ -48,9 +48,8 @@ fn executor_with_timeout(max_parallel: usize, timeout: Duration, log_dir: PathBu
     let job_runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        timeout,
         log_dir,
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(timeout)),
     );
     Executor::new(max_parallel, port_allocator, job_runner)
 }

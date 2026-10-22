@@ -9,10 +9,13 @@ use slotgate::time::tokio_job_clock::TokioJobClock;
 use slotgate::time::wall_clock_seed::WallClockSeed;
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    GateRunner::new(Arc::new(TokioJobClock::new()), Arc::new(WallClockSeed))
-        .run(GateArgs::parse())
+    let args = GateArgs::parse();
+    let clock = TokioJobClock::new(Duration::from_secs(args.timeout_secs));
+    GateRunner::new(Arc::new(clock), Arc::new(WallClockSeed))
+        .run(args)
         .await
 }

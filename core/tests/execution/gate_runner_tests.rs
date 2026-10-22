@@ -11,6 +11,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::time::Duration;
 
 // A shell is the portable way to exit with a chosen code -- just not the same
 // shell. Selecting it here keeps every test running on every platform rather
@@ -62,7 +63,7 @@ fn args_without_pre_build() -> GateArgs {
 // what it looks like it says.
 fn gate_runner() -> GateRunner {
     GateRunner::new(
-        Arc::new(TokioJobClock::new()),
+        Arc::new(TokioJobClock::new(Duration::from_secs(30))),
         Arc::new(FakeSeedSource::new(7)),
     )
 }

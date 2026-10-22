@@ -30,7 +30,7 @@ impl FakeJobClock {
 }
 
 impl JobClock for FakeJobClock {
-    fn deadline(&self, _after: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+    fn deadline(&self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
         if self.expires {
             Box::pin(ready(()))
         } else {
@@ -51,7 +51,7 @@ impl JobClock for FakeJobClock {
 fn deadline_of_a_fake_that_expires_is_up_at_once() {
     // Arrange
     let clock = FakeJobClock::new(&[], true);
-    let mut deadline = clock.deadline(Duration::from_secs(60));
+    let mut deadline = clock.deadline();
 
     // Act
     let polled = deadline
@@ -66,7 +66,7 @@ fn deadline_of_a_fake_that_expires_is_up_at_once() {
 fn deadline_of_a_fake_that_never_expires_is_still_pending() {
     // Arrange
     let clock = FakeJobClock::new(&[], false);
-    let mut deadline = clock.deadline(Duration::from_millis(1));
+    let mut deadline = clock.deadline();
 
     // Act
     let polled = deadline

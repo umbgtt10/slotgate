@@ -14,16 +14,21 @@ three types take time through ports their constructors are handed.
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for
   stern4rust's coming `injected-time` rule. `JobClock` -- a reading on the
-  clock's own scale and a deadline that resolves once a duration has passed --
-  times a job and races its wait, the race `tokio::time::timeout` made; its
-  adapter `TokioJobClock` is Tokio's clock, with its origin at its first
-  reading. `SeedSource` draws the shuffle's seed when `--seed` is absent;
+  clock's own scale and a deadline that resolves once a job's time is up --
+  times a job and races its wait, the race `tokio::time::timeout` made. The
+  limit is the clock's: `TokioJobClock::new` takes it, Tokio's clock with its
+  origin at its first reading, and `JobRunner::new` no longer takes a timeout.
+  `SeedSource` draws the shuffle's seed when `--seed` is absent;
   `WallClockSeed` reads it off the wall clock as before. `JobRunner::new`
   takes a clock, `JobOrder::new` a seed source, and `GateRunner::new` both,
-  whose `run` and `apply` are now methods; `main.rs` hands in the real ones.
-  Two new tests drive a fake clock -- a job timed out when the clock says, a
-  duration the clock measured -- and one a fake seed, the order an unseeded run
-  draws; no test was removed and no assertion changed.
+  whose `run` and `apply` are now methods; `main.rs` builds the real ones,
+  the clock from `--timeout-secs`. Two new tests drive a fake clock -- a job
+  timed out when the clock says, a duration the clock measured -- and one a
+  fake seed, the order an unseeded run draws. No test was removed. One
+  assertion changed: `run_enforces_a_timeout_and_reports_timed_out` no longer
+  sets a 300 ms timeout and asserts the run returned within ten seconds of
+  real time; its clock says the time is up, and it asserts the job was
+  stopped -- the marker it prints after its 30 s sleep is not in its log.
 - A `SlotGuard` takes its slot and gives it back itself. `SlotGuard::take`,
   public with tests of its own, claims the first free slot from the free list
   it is handed and returns it there when dropped; it replaces the `pub(crate)`
