@@ -47,22 +47,34 @@ a fresh checkout with none of the house tools installed.
 Stage 2 is `cargo xtask stage2` -- a real crate under `xtask/`, gated like any
 other code, rather than a script. Each gate is a `Gate` implementation
 constructed against a `CommandRunner` trait, so the argument lists and the
-failure messages are covered by `xtask`'s own integration tests. It runs five
+failure messages are covered by `xtask`'s own integration tests. It runs six
 installed cargo subcommands, in this order:
 
 | gate | asks |
 |---|---|
 | `cargo stern4rust` | do the house coding rules hold |
+| `cargo shear` | is every declared dependency used, in the section that uses it |
 | `cargo dry4rust` | did this change add duplicated code |
 | `cargo crap4rust` | is any function complex and untested |
 | `cargo twin4rust` | does every source file have a mirrored test file |
 | `cargo iceberg4rust` | is any file's private implementation risk too high |
 
 stern4rust runs **first** because its corrections are renames, file moves and
-directory splits: a layout it is about to reject is a layout the other four
+directory splits: a layout it is about to reject is a layout the other five
 would have measured for nothing. Its findings are also the cheapest to act on.
 
-dry4rust runs **second** for the same reason: removing a duplicate moves code
+cargo-shear runs **second**: its corrections edit manifests only -- a
+dependency removed, or moved to the section that uses it -- so they change
+nothing the four behind it measure, and it takes a second. It runs `--locked`,
+reading the lock file and never writing it, and `--deny-warnings`, so an
+optional dependency no feature's code uses fails as an unused one does. A
+dependency it cannot see used -- linked only for what it provides, declared
+only to switch on a feature, used only by generated code -- goes in
+`[package.metadata.cargo-shear] ignored`, and the gate refuses an entry without
+its reason in the same table's `reasons`; there are none today. Pinned at
+1.14.0, as CI installs it.
+
+dry4rust runs **third** for the same reason: removing a duplicate moves code
 between files, which changes what the three behind it measure. It scans
 `core/src` only -- tests repeat their arrangement by design -- and checks with
 zero ceilings against `dry4rust-baseline.json`, the duplication already there
@@ -93,6 +105,7 @@ gates is not exempt from them.
 `cargo install cargo-crap4rust`
 `cargo install cargo-twin4rust`
 `cargo install cargo-iceberg4rust`
+`cargo install --locked cargo-shear --version 1.14.0`
 
 ## Layout
 
