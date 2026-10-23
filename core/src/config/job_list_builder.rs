@@ -11,16 +11,17 @@ pub struct JobListBuilder;
 
 impl JobListBuilder {
     pub fn build(args: &GateArgs) -> Vec<Job> {
-        args.jobs
+        args.jobs()
             .iter()
-            .map(|job_name| Job {
-                name: job_name.clone(),
-                program: args.program.clone(),
-                args: args
-                    .program_args
-                    .iter()
-                    .map(|arg| arg.replace(JOB_PLACEHOLDER, job_name))
-                    .collect(),
+            .map(|job_name| {
+                Job::new(
+                    job_name.clone(),
+                    args.program().to_string(),
+                    args.program_args()
+                        .iter()
+                        .map(|arg| arg.replace(JOB_PLACEHOLDER, job_name))
+                        .collect(),
+                )
             })
             .collect()
     }

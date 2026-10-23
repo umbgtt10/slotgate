@@ -40,10 +40,10 @@ impl JobOrder {
     // `--seed` one is drawn from the seed source -- the wall clock, in a real
     // run -- which is the single place this tool wants a number nobody chose.
     pub fn apply(&self, jobs: Vec<Job>, args: &GateArgs) -> Vec<Job> {
-        if !args.random {
+        if !args.random() {
             return jobs;
         }
-        let seed = args.seed.unwrap_or_else(|| self.seeds.draw());
+        let seed = args.seed().unwrap_or_else(|| self.seeds.draw());
         println!("SLOTGATE — RANDOM ORDER, seed {seed} (replay with --seed {seed})");
         println!();
         Self::shuffle(jobs, seed)

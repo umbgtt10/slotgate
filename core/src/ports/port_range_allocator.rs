@@ -22,9 +22,6 @@ impl PortRangeAllocator {
         let base = (self.base_port as u32)
             .saturating_add(offset)
             .min(u16::MAX as u32) as u16;
-        PortRange {
-            base,
-            count: self.range_size,
-        }
+        PortRange::new(base, self.range_size)
     }
 }

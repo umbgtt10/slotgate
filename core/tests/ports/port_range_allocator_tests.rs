@@ -14,7 +14,7 @@ fn consecutive_slot_ranges_never_overlap() {
     let slot_one = allocator.range_for_slot(1);
 
     // Assert
-    assert!(slot_zero.end() < slot_one.base);
+    assert!(slot_zero.end() < slot_one.base());
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn many_slots_across_a_full_max_parallel_span_are_pairwise_disjoint() {
         for j in (i + 1)..ranges.len() {
             let a = &ranges[i];
             let b = &ranges[j];
-            let disjoint = a.end() < b.base || b.end() < a.base;
+            let disjoint = a.end() < b.base() || b.end() < a.base();
             assert!(disjoint, "ranges for slot {i} and slot {j} overlap");
         }
     }
@@ -62,9 +62,9 @@ fn range_for_slot_advances_by_range_size_per_slot() {
     let slot_two = allocator.range_for_slot(2);
 
     // Assert
-    assert_eq!(slot_zero.base, 30000);
-    assert_eq!(slot_one.base, 30100);
-    assert_eq!(slot_two.base, 30200);
+    assert_eq!(slot_zero.base(), 30000);
+    assert_eq!(slot_one.base(), 30100);
+    assert_eq!(slot_two.base(), 30200);
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn range_for_slot_count_matches_configured_range_size() {
     let range = allocator.range_for_slot(0);
 
     // Assert
-    assert_eq!(range.count, 100);
+    assert_eq!(range.count(), 100);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn range_for_slot_does_not_overflow_on_large_slot_index() {
 
     // Act & Assert
     let range = allocator.range_for_slot(1000);
-    assert_eq!(range.base, u16::MAX);
+    assert_eq!(range.base(), u16::MAX);
 }
 
 #[test]
@@ -98,5 +98,5 @@ fn range_for_slot_zero_starts_at_base_port() {
     let range = allocator.range_for_slot(0);
 
     // Assert
-    assert_eq!(range.base, 30000);
+    assert_eq!(range.base(), 30000);
 }

@@ -17,39 +17,33 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 fn args_with(random: bool, seed: Option<u64>) -> GateArgs {
-    GateArgs {
-        max_parallel: 1,
-        port_range_base: 30000,
-        port_range_size: 100,
-        port_env_base: String::from("PORT_RANGE_BASE"),
-        port_env_count: String::from("PORT_RANGE_COUNT"),
-        timeout_secs: 120,
-        log_dir: PathBuf::from("logs"),
-        program: String::from("cargo"),
-        program_args: Vec::new(),
-        jobs: Vec::new(),
-        jobs_paths: Vec::new(),
-        jobs_file: None,
-        random,
-        seed,
-        pre_build_program: None,
-        pre_build_args: Vec::new(),
-        pre_build_target_name: None,
-    }
+    GateArgs::default()
+        .with_max_parallel(1)
+        .with_port_range_base(30000)
+        .with_port_range_size(100)
+        .with_port_env_base(String::from("PORT_RANGE_BASE"))
+        .with_port_env_count(String::from("PORT_RANGE_COUNT"))
+        .with_timeout_secs(120)
+        .with_log_dir(PathBuf::from("logs"))
+        .with_program(String::from("cargo"))
+        .with_random(random)
+        .with_seed(seed)
 }
 
 fn jobs(count: usize) -> Vec<Job> {
     (0..count)
-        .map(|index| Job {
-            name: format!("job_{index}"),
-            program: String::from("cargo"),
-            args: vec![format!("job_{index}")],
+        .map(|index| {
+            Job::new(
+                format!("job_{index}"),
+                String::from("cargo"),
+                vec![format!("job_{index}")],
+            )
         })
         .collect()
 }
 
 fn names(jobs: &[Job]) -> Vec<String> {
-    jobs.iter().map(|job| job.name.clone()).collect()
+    jobs.iter().map(|job| job.name().to_string()).collect()
 }
 
 #[test]

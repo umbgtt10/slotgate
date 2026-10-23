@@ -3,13 +3,52 @@
 // SPDX-License-Identifier: MIT
 
 use crate::execution::job_status::JobStatus;
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
 pub struct JobOutcome {
-    pub job_name: String,
-    pub status: JobStatus,
-    pub duration: Duration,
-    pub stdout_path: PathBuf,
-    pub stderr_path: PathBuf,
+    job_name: String,
+    status: JobStatus,
+    duration: Duration,
+    stdout_path: PathBuf,
+    stderr_path: PathBuf,
+}
+
+impl JobOutcome {
+    pub fn new(
+        job_name: String,
+        status: JobStatus,
+        duration: Duration,
+        stdout_path: PathBuf,
+        stderr_path: PathBuf,
+    ) -> Self {
+        Self {
+            job_name,
+            status,
+            duration,
+            stdout_path,
+            stderr_path,
+        }
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.duration
+    }
+
+    pub fn job_name(&self) -> &str {
+        &self.job_name
+    }
+
+    pub fn status(&self) -> JobStatus {
+        self.status
+    }
+
+    pub fn stderr_path(&self) -> &Path {
+        &self.stderr_path
+    }
+
+    pub fn stdout_path(&self) -> &Path {
+        &self.stdout_path
+    }
 }

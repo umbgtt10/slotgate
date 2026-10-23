@@ -7,9 +7,9 @@ use crate::execution::job_status::JobStatus;
 use std::process::ExitCode;
 
 pub struct RunSummary {
-    pub passed: usize,
-    pub failed: usize,
-    pub timed_out: usize,
+    passed: usize,
+    failed: usize,
+    timed_out: usize,
 }
 
 impl RunSummary {
@@ -20,7 +20,7 @@ impl RunSummary {
             timed_out: 0,
         };
         for outcome in outcomes {
-            match outcome.status {
+            match outcome.status() {
                 JobStatus::Passed => summary.passed += 1,
                 JobStatus::Failed => summary.failed += 1,
                 JobStatus::TimedOut => summary.timed_out += 1,
@@ -37,8 +37,16 @@ impl RunSummary {
         }
     }
 
+    pub fn failed(&self) -> usize {
+        self.failed
+    }
+
     pub fn is_success(&self) -> bool {
         self.failed == 0 && self.timed_out == 0
+    }
+
+    pub fn passed(&self) -> usize {
+        self.passed
     }
 
     pub fn render(&self) -> String {
@@ -49,6 +57,10 @@ impl RunSummary {
             self.timed_out,
             self.total()
         )
+    }
+
+    pub fn timed_out(&self) -> usize {
+        self.timed_out
     }
 
     pub fn total(&self) -> usize {

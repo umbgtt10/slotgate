@@ -14,7 +14,7 @@ use std::time::Duration;
 #[tokio::main]
 async fn main() -> ExitCode {
     let args = GateArgs::parse();
-    let clock = TokioJobClock::new(Duration::from_secs(args.timeout_secs));
+    let clock = TokioJobClock::new(Duration::from_secs(args.timeout_secs()));
     GateRunner::new(Arc::new(clock), Arc::new(WallClockSeed))
         .run(args)
         .await

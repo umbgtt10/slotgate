@@ -9,17 +9,13 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 fn outcome(status: JobStatus) -> JobOutcome {
-    JobOutcome {
-        job_name: String::from("cluster::byzantine_tests::duplicate_prepare"),
+    JobOutcome::new(
+        String::from("cluster::byzantine_tests::duplicate_prepare"),
         status,
-        duration: Duration::from_millis(28_510),
-        stdout_path: PathBuf::from(
-            "logs/run/cluster__byzantine_tests__duplicate_prepare/stdout.log",
-        ),
-        stderr_path: PathBuf::from(
-            "logs/run/cluster__byzantine_tests__duplicate_prepare/stderr.log",
-        ),
-    }
+        Duration::from_millis(28_510),
+        PathBuf::from("logs/run/cluster__byzantine_tests__duplicate_prepare/stdout.log"),
+        PathBuf::from("logs/run/cluster__byzantine_tests__duplicate_prepare/stderr.log"),
+    )
 }
 
 #[test]

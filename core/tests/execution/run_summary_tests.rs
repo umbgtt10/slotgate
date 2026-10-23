@@ -10,13 +10,13 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 fn outcome(name: &str, status: JobStatus) -> JobOutcome {
-    JobOutcome {
-        job_name: String::from(name),
+    JobOutcome::new(
+        String::from(name),
         status,
-        duration: Duration::from_millis(1),
-        stdout_path: PathBuf::from("out.log"),
-        stderr_path: PathBuf::from("err.log"),
-    }
+        Duration::from_millis(1),
+        PathBuf::from("out.log"),
+        PathBuf::from("err.log"),
+    )
 }
 
 #[test]
@@ -57,9 +57,9 @@ fn from_outcomes_counts_each_status_into_its_own_bucket() {
     let summary = RunSummary::from_outcomes(&outcomes);
 
     // Assert
-    assert_eq!(summary.passed, 3);
-    assert_eq!(summary.failed, 1);
-    assert_eq!(summary.timed_out, 1);
+    assert_eq!(summary.passed(), 3);
+    assert_eq!(summary.failed(), 1);
+    assert_eq!(summary.timed_out(), 1);
 }
 
 #[test]
@@ -72,9 +72,9 @@ fn from_outcomes_of_an_empty_run_counts_nothing() {
     let summary = RunSummary::from_outcomes(&outcomes);
 
     // Assert
-    assert_eq!(summary.passed, 0);
-    assert_eq!(summary.failed, 0);
-    assert_eq!(summary.timed_out, 0);
+    assert_eq!(summary.passed(), 0);
+    assert_eq!(summary.failed(), 0);
+    assert_eq!(summary.timed_out(), 0);
     assert_eq!(summary.total(), 0);
 }
 
