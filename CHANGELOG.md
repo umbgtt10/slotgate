@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 The command line, output, exit codes, slots and port ranges are unchanged. The
-library is not: one `pub(crate)` method is gone, a constructor is replaced, and
-three types take time through ports their constructors are handed.
+library is not: one `pub(crate)` method is gone, a constructor is replaced,
+three types take time through ports their constructors are handed, and two keep
+their fields private.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for
@@ -44,6 +45,14 @@ three types take time through ports their constructors are handed.
   its `PRE-BUILD FAILED` label itself rather than the runner adding it. For
   stern4rust's coming `typed-errors` rule: a library's public functions fail
   with an error type of their own.
+- `RunSummary` and `PortRange` keep their fields to themselves, for
+  stern4rust's coming `records-and-objects` rule: each does something with its
+  data -- a summary renders itself and decides the exit code, a range reports
+  its `end()` -- so each is an object, and an object's fields are private.
+  `RunSummary`'s `passed`, `failed` and `timed_out`, public fields in 0.6.1,
+  are read through methods of those names; `PortRange`'s `base` and `count`
+  likewise, and a `PortRange` is built by `PortRange::new(base, count)` rather
+  than by literal.
 
 ## [0.6.1] - 2026-10-10
 

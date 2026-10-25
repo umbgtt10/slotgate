@@ -153,7 +153,7 @@ Specifically:
 
 ## User coding standards
 
-- one struct per file
+- one object per file; records where record-home puts them
 - no unnecessary comments in code
 - unit tests are not allowed. Only integration tests are
 - consolidate scattered functions inside structs as appropriate
