@@ -59,11 +59,11 @@ fn new_executor(max_parallel: usize, log_dir: PathBuf) -> Executor {
 }
 
 fn quick_job(name: &str, exit_code: u32) -> Job {
-    Job::new(
-        String::from(name),
-        String::from(SHELL),
-        shell_args(&format!("exit {exit_code}")),
-    )
+    Job {
+        name: String::from(name),
+        program: String::from(SHELL),
+        args: shell_args(&format!("exit {exit_code}")),
+    }
 }
 
 // A job that leaves its mark in the meeting point and waits until `together`
@@ -72,10 +72,10 @@ fn quick_job(name: &str, exit_code: u32) -> Job {
 #[cfg(windows)]
 fn rendezvous_job(name: &str, meeting_point: &Path, together: usize) -> Job {
     let dir = meeting_point.display();
-    Job::new(
-        String::from(name),
-        String::from("powershell"),
-        vec![
+    Job {
+        name: String::from(name),
+        program: String::from("powershell"),
+        args: vec![
             String::from("-NoProfile"),
             String::from("-Command"),
             format!(
@@ -83,19 +83,19 @@ fn rendezvous_job(name: &str, meeting_point: &Path, together: usize) -> Job {
                  while ((Get-ChildItem -LiteralPath '{dir}').Count -lt {together}) {{ Start-Sleep -Milliseconds 50 }}"
             ),
         ],
-    )
+    }
 }
 
 #[cfg(not(windows))]
 fn rendezvous_job(name: &str, meeting_point: &Path, together: usize) -> Job {
     let dir = meeting_point.display();
-    Job::new(
-        String::from(name),
-        String::from(SHELL),
-        shell_args(&format!(
+    Job {
+        name: String::from(name),
+        program: String::from(SHELL),
+        args: shell_args(&format!(
             "touch '{dir}/{name}'; while [ $(ls '{dir}' | wc -l) -lt {together} ]; do sleep 0.05; done"
         )),
-    )
+    }
 }
 
 fn shell_args(script: &str) -> Vec<String> {
@@ -113,12 +113,10 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
     // Arrange
     let max_parallel = 2;
     let executor = new_executor(max_parallel, temp_log_dir("slot_owned_port_ranges"));
-    let echo_port_job = |name: &str| {
-        Job::new(
-            String::from(name),
-            String::from(SHELL),
-            shell_args(&echo_variable("PORT_RANGE_BASE")),
-        )
+    let echo_port_job = |name: &str| Job {
+        name: String::from(name),
+        program: String::from(SHELL),
+        args: shell_args(&echo_variable("PORT_RANGE_BASE")),
     };
     let jobs = vec![
         echo_port_job("p1"),
@@ -136,7 +134,7 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
 
     // Assert
     for outcome in &outcomes {
-        let stdout = fs::read_to_string(outcome.stdout_path()).expect("stdout log should exist");
+        let stdout = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
         let observed_base: u16 = stdout
             .trim()
             .parse()
@@ -144,7 +142,7 @@ async fn run_all_assigns_only_slot_owned_port_ranges() {
         assert!(
             allowed_bases.contains(&observed_base),
             "job {} used port base {observed_base}, not one of the {max_parallel} allowed slot bases",
-            outcome.job_name()
+            outcome.job_name
         );
     }
 }
@@ -163,7 +161,7 @@ async fn run_all_invokes_the_callback_once_per_job() {
             observed_for_callback
                 .lock()
                 .expect("observed lock poisoned")
-                .push(outcome.job_name().to_string());
+                .push(outcome.job_name.clone());
         })
         .await;
 
@@ -187,7 +185,7 @@ async fn run_all_invokes_the_callback_with_the_matching_status() {
             observed_for_callback
                 .lock()
                 .expect("observed lock poisoned")
-                .push((outcome.job_name().to_string(), outcome.status()));
+                .push((outcome.job_name.clone(), outcome.status));
         })
         .await;
 
@@ -209,14 +207,14 @@ async fn run_all_reports_pass_and_fail_correctly_per_job() {
     // Assert
     let passes = outcomes
         .iter()
-        .find(|o| o.job_name() == "passes")
+        .find(|o| o.job_name == "passes")
         .expect("missing outcome for 'passes'");
     let fails = outcomes
         .iter()
-        .find(|o| o.job_name() == "fails")
+        .find(|o| o.job_name == "fails")
         .expect("missing outcome for 'fails'");
-    assert_eq!(passes.status(), JobStatus::Passed);
-    assert_eq!(fails.status(), JobStatus::Failed);
+    assert_eq!(passes.status, JobStatus::Passed);
+    assert_eq!(fails.status, JobStatus::Failed);
 }
 
 #[tokio::test]
@@ -252,6 +250,6 @@ async fn run_all_runs_as_many_jobs_at_once_as_max_parallel() {
     let outcomes = executor.run_all(jobs, |_| {}).await;
 
     // Assert
-    let statuses: Vec<JobStatus> = outcomes.iter().map(|outcome| outcome.status()).collect();
+    let statuses: Vec<JobStatus> = outcomes.iter().map(|outcome| outcome.status).collect();
     assert_eq!(statuses, vec![JobStatus::Passed; 4]);
 }

@@ -18,17 +18,19 @@ use std::fs;
 use std::path::PathBuf;
 
 fn args_with(jobs: Vec<String>, jobs_file: Option<PathBuf>) -> GateArgs {
-    GateArgs::default()
-        .with_max_parallel(1)
-        .with_port_range_base(30000)
-        .with_port_range_size(100)
-        .with_port_env_base("PORT_RANGE_BASE".to_string())
-        .with_port_env_count("PORT_RANGE_COUNT".to_string())
-        .with_timeout_secs(120)
-        .with_log_dir(PathBuf::from("logs"))
-        .with_program("cargo".to_string())
-        .with_jobs(jobs)
-        .with_jobs_file(jobs_file)
+    GateArgs {
+        max_parallel: 1,
+        port_range_base: 30000,
+        port_range_size: 100,
+        port_env_base: "PORT_RANGE_BASE".to_string(),
+        port_env_count: "PORT_RANGE_COUNT".to_string(),
+        timeout_secs: 120,
+        log_dir: PathBuf::from("logs"),
+        program: "cargo".to_string(),
+        jobs,
+        jobs_file,
+        ..Default::default()
+    }
 }
 
 fn file_with(name: &str, contents: &str) -> PathBuf {
@@ -53,7 +55,7 @@ fn apply_of_a_file_returns_args_carrying_those_jobs() {
     let applied = JobSource::apply(args).expect("the file should resolve");
 
     // Assert
-    assert_eq!(applied.jobs(), owned(&["alpha", "beta"]));
+    assert_eq!(applied.jobs, owned(&["alpha", "beta"]));
 }
 
 // Parsed by clap rather than built by hand, because that is where this went
@@ -78,7 +80,7 @@ fn apply_of_args_parsed_with_only_a_file_resolves_that_file() {
     let applied = JobSource::apply(args).expect("a parsed --jobs-file should resolve");
 
     // Assert
-    assert_eq!(applied.jobs(), owned(&["alpha", "beta"]));
+    assert_eq!(applied.jobs, owned(&["alpha", "beta"]));
 }
 
 #[test]

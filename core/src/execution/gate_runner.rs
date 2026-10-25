@@ -59,24 +59,23 @@ impl GateRunner {
     }
 
     fn executor_for(&self, args: &GateArgs) -> Executor {
-        let port_allocator =
-            PortRangeAllocator::new(args.port_range_base(), args.port_range_size());
+        let port_allocator = PortRangeAllocator::new(args.port_range_base, args.port_range_size);
         let job_runner = JobRunner::new(
-            args.port_env_base().to_string(),
-            args.port_env_count().to_string(),
-            args.log_dir().to_path_buf(),
+            args.port_env_base.clone(),
+            args.port_env_count.clone(),
+            args.log_dir.clone(),
             Arc::clone(&self.clock),
         );
-        Executor::new(args.max_parallel(), port_allocator, job_runner)
+        Executor::new(args.max_parallel, port_allocator, job_runner)
     }
 
     fn print_plan(args: &GateArgs, job_count: usize) {
         println!(
             "SLOTGATE — {} jobs, max_parallel={}, ports {}-{} per slot",
             job_count,
-            args.max_parallel(),
-            args.port_range_base(),
-            args.port_range_base() as u32 + args.port_range_size() as u32 - 1,
+            args.max_parallel,
+            args.port_range_base,
+            args.port_range_base as u32 + args.port_range_size as u32 - 1,
         );
         println!();
     }

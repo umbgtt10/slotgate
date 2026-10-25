@@ -79,18 +79,18 @@ async fn run_a_command_that_exits_nonzero_reports_failed() {
         temp_log_dir("exits_nonzero"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("fails"),
-        String::from(SHELL),
-        shell_args("exit 1"),
-    );
+    let job = Job {
+        name: String::from("fails"),
+        program: String::from(SHELL),
+        args: shell_args("exit 1"),
+    };
     let port_range = PortRange::new(31010, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    assert_eq!(outcome.status(), JobStatus::Failed);
+    assert_eq!(outcome.status, JobStatus::Failed);
 }
 
 #[tokio::test]
@@ -102,18 +102,18 @@ async fn run_a_command_that_exits_zero_reports_passed() {
         temp_log_dir("exits_zero"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("succeeds"),
-        String::from(SHELL),
-        shell_args("exit 0"),
-    );
+    let job = Job {
+        name: String::from("succeeds"),
+        program: String::from(SHELL),
+        args: shell_args("exit 0"),
+    };
     let port_range = PortRange::new(31000, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    assert_eq!(outcome.status(), JobStatus::Passed);
+    assert_eq!(outcome.status, JobStatus::Passed);
 }
 
 // A job that ran nothing did not pass. `cargo test --exact` given a name no
@@ -131,18 +131,18 @@ async fn run_a_command_that_reports_running_no_tests_reports_failed() {
         temp_log_dir("ran_nothing"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("matches_nothing"),
-        String::from(SHELL),
-        shell_args("echo running 0 tests"),
-    );
+    let job = Job {
+        name: String::from("matches_nothing"),
+        program: String::from(SHELL),
+        args: shell_args("echo running 0 tests"),
+    };
     let port_range = PortRange::new(31210, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    assert_eq!(outcome.status(), JobStatus::Failed);
+    assert_eq!(outcome.status, JobStatus::Failed);
 }
 
 // A job name carrying `::` is not a filename. The runner has to sanitise it for
@@ -156,19 +156,21 @@ async fn run_a_job_whose_name_contains_double_colons_still_runs_successfully() {
         temp_log_dir("filesystem_safety"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("cluster::byzantine_tests::byzantine_new_view_from_non_proposer_is_rejected"),
-        String::from(SHELL),
-        shell_args("exit 0"),
-    );
+    let job = Job {
+        name: String::from(
+            "cluster::byzantine_tests::byzantine_new_view_from_non_proposer_is_rejected",
+        ),
+        program: String::from(SHELL),
+        args: shell_args("exit 0"),
+    };
     let port_range = PortRange::new(33000, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    assert_eq!(outcome.status(), JobStatus::Passed);
-    assert!(outcome.stdout_path().exists());
+    assert_eq!(outcome.status, JobStatus::Passed);
+    assert!(outcome.stdout_path.exists());
 }
 
 #[tokio::test]
@@ -180,18 +182,18 @@ async fn run_captures_stdout_to_the_returned_path() {
         temp_log_dir("captures_stdout"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("prints_marker"),
-        String::from(SHELL),
-        shell_args("echo distinctive_marker_12345"),
-    );
+    let job = Job {
+        name: String::from("prints_marker"),
+        program: String::from(SHELL),
+        args: shell_args("echo distinctive_marker_12345"),
+    };
     let port_range = PortRange::new(31600, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    let stdout = fs::read_to_string(outcome.stdout_path()).expect("stdout log should exist");
+    let stdout = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     assert!(stdout.contains("distinctive_marker_12345"));
 }
 
@@ -206,15 +208,19 @@ async fn run_enforces_a_timeout_and_reports_timed_out() {
         Arc::new(FakeJobClock::new(&[], true)),
     );
     let (program, args) = sleep_then_echo(30, "outlived_its_deadline");
-    let job = Job::new(String::from("sleeps_too_long"), program, args);
+    let job = Job {
+        name: String::from("sleeps_too_long"),
+        program,
+        args,
+    };
     let port_range = PortRange::new(31700, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    assert_eq!(outcome.status(), JobStatus::TimedOut);
-    let stdout = fs::read_to_string(outcome.stdout_path()).expect("stdout log should exist");
+    assert_eq!(outcome.status, JobStatus::TimedOut);
+    let stdout = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     assert!(
         !stdout.contains("outlived_its_deadline"),
         "timeout enforcement should stop the job rather than wait out its 30s sleep"
@@ -230,18 +236,18 @@ async fn run_injects_port_range_env_vars_readable_by_the_child() {
         temp_log_dir("env_vars"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("prints_env"),
-        String::from(SHELL),
-        shell_args(&echo_variables(&["PORT_RANGE_BASE", "PORT_RANGE_COUNT"])),
-    );
+    let job = Job {
+        name: String::from("prints_env"),
+        program: String::from(SHELL),
+        args: shell_args(&echo_variables(&["PORT_RANGE_BASE", "PORT_RANGE_COUNT"])),
+    };
     let port_range = PortRange::new(31500, 25);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    let stdout = fs::read_to_string(outcome.stdout_path()).expect("stdout log should exist");
+    let stdout = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     assert!(stdout.contains("31500"), "stdout was: {stdout}");
     assert!(stdout.contains("25"), "stdout was: {stdout}");
 }
@@ -259,18 +265,18 @@ async fn run_publishes_the_job_log_directory_to_the_child() {
         log_dir.clone(),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("cluster::some_tests::a_case"),
-        String::from(SHELL),
-        shell_args(&echo_variables(&["SLOTGATE_JOB_LOG_DIR"])),
-    );
+    let job = Job {
+        name: String::from("cluster::some_tests::a_case"),
+        program: String::from(SHELL),
+        args: shell_args(&echo_variables(&["SLOTGATE_JOB_LOG_DIR"])),
+    };
     let port_range = PortRange::new(31700, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    let printed = fs::read_to_string(outcome.stdout_path()).expect("stdout log should exist");
+    let printed = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     let expected = log_dir.join("cluster__some_tests__a_case");
     assert_eq!(printed.trim(), expected.to_string_lossy());
 }
@@ -286,18 +292,18 @@ async fn run_publishes_the_unsanitised_job_name_to_the_child() {
         temp_log_dir("publishes_job_name"),
         Arc::new(TokioJobClock::new(Duration::from_secs(10))),
     );
-    let job = Job::new(
-        String::from("cluster::some_tests::a_case"),
-        String::from(SHELL),
-        shell_args(&echo_variables(&["SLOTGATE_JOB_NAME"])),
-    );
+    let job = Job {
+        name: String::from("cluster::some_tests::a_case"),
+        program: String::from(SHELL),
+        args: shell_args(&echo_variables(&["SLOTGATE_JOB_NAME"])),
+    };
     let port_range = PortRange::new(31710, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    let printed = fs::read_to_string(outcome.stdout_path()).expect("stdout log should exist");
+    let printed = fs::read_to_string(&outcome.stdout_path).expect("stdout log should exist");
     assert_eq!(printed.trim(), "cluster::some_tests::a_case");
 }
 
@@ -313,17 +319,17 @@ async fn run_reports_the_duration_its_clock_measured() {
             false,
         )),
     );
-    let job = Job::new(
-        String::from("timed"),
-        String::from(SHELL),
-        shell_args("exit 0"),
-    );
+    let job = Job {
+        name: String::from("timed"),
+        program: String::from(SHELL),
+        args: shell_args("exit 0"),
+    };
     let port_range = PortRange::new(31800, 10);
 
     // Act
     let outcome = runner.run(&job, &port_range).await;
 
     // Assert
-    assert_eq!(outcome.status(), JobStatus::Passed);
-    assert_eq!(outcome.duration(), Duration::from_secs(3));
+    assert_eq!(outcome.status, JobStatus::Passed);
+    assert_eq!(outcome.duration, Duration::from_secs(3));
 }

@@ -10,13 +10,13 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 fn outcome(name: &str, status: JobStatus) -> JobOutcome {
-    JobOutcome::new(
-        String::from(name),
+    JobOutcome {
+        job_name: String::from(name),
         status,
-        Duration::from_millis(1),
-        PathBuf::from("out.log"),
-        PathBuf::from("err.log"),
-    )
+        duration: Duration::from_millis(1),
+        stdout_path: PathBuf::from("out.log"),
+        stderr_path: PathBuf::from("err.log"),
+    }
 }
 
 #[test]

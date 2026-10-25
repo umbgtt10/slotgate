@@ -7,17 +7,19 @@ use slotgate::config::job_list_builder::JobListBuilder;
 use std::path::PathBuf;
 
 fn args(program_args: Vec<&str>, jobs: Vec<&str>) -> GateArgs {
-    GateArgs::default()
-        .with_max_parallel(3)
-        .with_port_range_base(30000)
-        .with_port_range_size(100)
-        .with_port_env_base(String::from("PORT_RANGE_BASE"))
-        .with_port_env_count(String::from("PORT_RANGE_COUNT"))
-        .with_timeout_secs(120)
-        .with_log_dir(PathBuf::from("logs/slotgate"))
-        .with_program(String::from("cargo"))
-        .with_program_args(program_args.into_iter().map(String::from).collect())
-        .with_jobs(jobs.into_iter().map(String::from).collect())
+    GateArgs {
+        max_parallel: 3,
+        port_range_base: 30000,
+        port_range_size: 100,
+        port_env_base: String::from("PORT_RANGE_BASE"),
+        port_env_count: String::from("PORT_RANGE_COUNT"),
+        timeout_secs: 120,
+        log_dir: PathBuf::from("logs/slotgate"),
+        program: String::from("cargo"),
+        program_args: program_args.into_iter().map(String::from).collect(),
+        jobs: jobs.into_iter().map(String::from).collect(),
+        ..Default::default()
+    }
 }
 
 #[test]
@@ -41,7 +43,7 @@ fn each_job_uses_the_configured_program() {
     let jobs = JobListBuilder::build(&args);
 
     // Assert
-    assert_eq!(jobs[0].program(), "cargo");
+    assert_eq!(jobs[0].program, "cargo");
 }
 
 #[test]
@@ -53,7 +55,7 @@ fn job_name_is_preserved_on_the_built_job() {
     let jobs = JobListBuilder::build(&args);
 
     // Assert
-    assert_eq!(jobs[0].name(), "scenario_b");
+    assert_eq!(jobs[0].name, "scenario_b");
 }
 
 #[test]
@@ -69,7 +71,7 @@ fn job_placeholder_is_substituted_with_the_job_name() {
 
     // Assert
     assert_eq!(
-        jobs[0].args(),
+        jobs[0].args,
         vec!["test", "--test", "all_tests", "scenario_a"]
     );
 }
@@ -83,5 +85,5 @@ fn program_args_without_a_placeholder_are_left_unchanged() {
     let jobs = JobListBuilder::build(&args);
 
     // Assert
-    assert_eq!(jobs[0].args(), vec!["test", "--all"]);
+    assert_eq!(jobs[0].args, vec!["test", "--all"]);
 }

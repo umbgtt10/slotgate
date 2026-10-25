@@ -20,7 +20,7 @@ impl RunSummary {
             timed_out: 0,
         };
         for outcome in outcomes {
-            match outcome.status() {
+            match outcome.status {
                 JobStatus::Passed => summary.passed += 1,
                 JobStatus::Failed => summary.failed += 1,
                 JobStatus::TimedOut => summary.timed_out += 1,

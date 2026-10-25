@@ -12,17 +12,19 @@ use slotgate::config::pre_build_resolver::PreBuildResolver;
 use std::path::PathBuf;
 
 fn args_without_pre_build() -> GateArgs {
-    GateArgs::default()
-        .with_max_parallel(2)
-        .with_port_range_base(31000)
-        .with_port_range_size(50)
-        .with_port_env_base(String::from("PORT_RANGE_BASE"))
-        .with_port_env_count(String::from("PORT_RANGE_COUNT"))
-        .with_timeout_secs(7)
-        .with_log_dir(PathBuf::from("logs/probe"))
-        .with_program(String::from("cargo"))
-        .with_program_args(vec![String::from("test"), String::from("{job}")])
-        .with_jobs(vec![String::from("alpha"), String::from("beta")])
+    GateArgs {
+        max_parallel: 2,
+        port_range_base: 31000,
+        port_range_size: 50,
+        port_env_base: String::from("PORT_RANGE_BASE"),
+        port_env_count: String::from("PORT_RANGE_COUNT"),
+        timeout_secs: 7,
+        log_dir: PathBuf::from("logs/probe"),
+        program: String::from("cargo"),
+        program_args: vec![String::from("test"), String::from("{job}")],
+        jobs: vec![String::from("alpha"), String::from("beta")],
+        ..Default::default()
+    }
 }
 
 #[tokio::test]
@@ -30,9 +32,12 @@ async fn resolve_pre_build_reports_an_error_when_the_pre_build_program_cannot_ru
     // Arrange -- a pre-build step that cannot even start must abort the run.
     // Falling through to the jobs would execute them against a binary the
     // build never produced.
-    let args = args_without_pre_build().with_pre_build_program(Some(String::from(
-        "slotgate-nonexistent-pre-build-program-for-tests",
-    )));
+    let args = GateArgs {
+        pre_build_program: Some(String::from(
+            "slotgate-nonexistent-pre-build-program-for-tests",
+        )),
+        ..args_without_pre_build()
+    };
 
     // Act
     let resolved = PreBuildResolver::resolve(&args).await;
@@ -57,14 +62,14 @@ async fn resolve_pre_build_without_a_pre_build_program_preserves_every_other_set
         .expect("no pre-build program means nothing can fail");
 
     // Assert
-    assert_eq!(resolved.max_parallel(), args.max_parallel());
-    assert_eq!(resolved.port_range_base(), args.port_range_base());
-    assert_eq!(resolved.port_range_size(), args.port_range_size());
-    assert_eq!(resolved.port_env_base(), args.port_env_base());
-    assert_eq!(resolved.port_env_count(), args.port_env_count());
-    assert_eq!(resolved.timeout_secs(), args.timeout_secs());
-    assert_eq!(resolved.log_dir(), args.log_dir());
-    assert_eq!(resolved.jobs(), args.jobs());
+    assert_eq!(resolved.max_parallel, args.max_parallel);
+    assert_eq!(resolved.port_range_base, args.port_range_base);
+    assert_eq!(resolved.port_range_size, args.port_range_size);
+    assert_eq!(resolved.port_env_base, args.port_env_base);
+    assert_eq!(resolved.port_env_count, args.port_env_count);
+    assert_eq!(resolved.timeout_secs, args.timeout_secs);
+    assert_eq!(resolved.log_dir, args.log_dir);
+    assert_eq!(resolved.jobs, args.jobs);
 }
 
 #[tokio::test]
@@ -80,6 +85,6 @@ async fn resolve_pre_build_without_a_pre_build_program_returns_the_arguments_unc
         .expect("no pre-build program means nothing can fail");
 
     // Assert
-    assert_eq!(resolved.program(), args.program());
-    assert_eq!(resolved.program_args(), args.program_args());
+    assert_eq!(resolved.program, args.program);
+    assert_eq!(resolved.program_args, args.program_args);
 }

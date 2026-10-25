@@ -27,26 +27,30 @@ const SHELL_FLAG: &str = "/C";
 const SHELL_FLAG: &str = "-c";
 
 fn args_running(command: &str, jobs: &[&str], log_dir: &str) -> GateArgs {
-    args_without_pre_build()
-        .with_program(String::from(SHELL))
-        .with_program_args(vec![String::from(SHELL_FLAG), String::from(command)])
-        .with_jobs(jobs.iter().map(|job| String::from(*job)).collect())
-        .with_timeout_secs(30)
-        .with_log_dir(temp_log_dir(log_dir))
+    GateArgs {
+        program: String::from(SHELL),
+        program_args: vec![String::from(SHELL_FLAG), String::from(command)],
+        jobs: jobs.iter().map(|job| String::from(*job)).collect(),
+        timeout_secs: 30,
+        log_dir: temp_log_dir(log_dir),
+        ..args_without_pre_build()
+    }
 }
 
 fn args_without_pre_build() -> GateArgs {
-    GateArgs::default()
-        .with_max_parallel(3)
-        .with_port_range_base(30_000)
-        .with_port_range_size(100)
-        .with_port_env_base(String::from("PORT_RANGE_BASE"))
-        .with_port_env_count(String::from("PORT_RANGE_COUNT"))
-        .with_timeout_secs(120)
-        .with_log_dir(PathBuf::from("logs/slotgate"))
-        .with_program(String::from("cargo"))
-        .with_program_args(vec![String::from("test"), String::from("{job}")])
-        .with_jobs(vec![String::from("alpha"), String::from("beta")])
+    GateArgs {
+        max_parallel: 3,
+        port_range_base: 30_000,
+        port_range_size: 100,
+        port_env_base: String::from("PORT_RANGE_BASE"),
+        port_env_count: String::from("PORT_RANGE_COUNT"),
+        timeout_secs: 120,
+        log_dir: PathBuf::from("logs/slotgate"),
+        program: String::from("cargo"),
+        program_args: vec![String::from("test"), String::from("{job}")],
+        jobs: vec![String::from("alpha"), String::from("beta")],
+        ..Default::default()
+    }
 }
 
 // ExitCode carries no accessor and no PartialEq, so the two renderings are

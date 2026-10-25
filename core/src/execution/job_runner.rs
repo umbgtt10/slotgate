@@ -46,20 +46,20 @@ impl JobRunner {
     }
 
     pub async fn run(&self, job: &Job, port_range: &PortRange) -> JobOutcome {
-        let job_dir = self.log_dir.join(FilesystemSafeName::sanitize(job.name()));
+        let job_dir = self.log_dir.join(FilesystemSafeName::sanitize(&job.name));
         create_dir_all(&job_dir).expect("failed to create job log directory");
         let stdout_path = job_dir.join("stdout.log");
         let stderr_path = job_dir.join("stderr.log");
         let stdout_file = File::create(&stdout_path).expect("failed to create stdout log file");
         let stderr_file = File::create(&stderr_path).expect("failed to create stderr log file");
 
-        let mut command = Command::new(job.program());
+        let mut command = Command::new(&job.program);
         command
-            .args(job.args())
+            .args(&job.args)
             .env(&self.port_env_base_var, port_range.base().to_string())
             .env(&self.port_env_count_var, port_range.count().to_string())
             .env(JOB_LOG_DIR_ENV_VAR, &job_dir)
-            .env(JOB_NAME_ENV_VAR, job.name())
+            .env(JOB_NAME_ENV_VAR, &job.name)
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(stderr_file));
 
@@ -81,13 +81,13 @@ impl JobRunner {
             }
         };
 
-        JobOutcome::new(
-            job.name().to_string(),
+        JobOutcome {
+            job_name: job.name.clone(),
             status,
-            self.clock.now().saturating_sub(started),
+            duration: self.clock.now().saturating_sub(started),
             stdout_path,
             stderr_path,
-        )
+        }
     }
 
     // A job that ran nothing did not pass.

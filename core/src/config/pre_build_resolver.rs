@@ -27,18 +27,18 @@ impl PreBuildResolver {
     /// Without a pre-build program the arguments pass through untouched.
     /// With one, a discovered test binary replaces `program`/`program_args`.
     pub async fn resolve(args: &GateArgs) -> Result<GateArgs, ConfigFailure> {
-        let Some(pre_build_program) = &args.pre_build_program() else {
+        let Some(pre_build_program) = &args.pre_build_program else {
             return Ok(args.clone());
         };
 
         println!(
             "SLOTGATE — PRE-BUILD: {pre_build_program} {}",
-            args.pre_build_args().join(" ")
+            args.pre_build_args.join(" ")
         );
         let discovered = PreBuildRunner::run(
             pre_build_program,
-            args.pre_build_args(),
-            args.pre_build_target_name(),
+            &args.pre_build_args,
+            args.pre_build_target_name.as_deref(),
         )
         .await?;
         println!();
@@ -54,11 +54,13 @@ impl PreBuildResolver {
     }
 
     fn with_discovered_binary(args: &GateArgs, executable: String) -> GateArgs {
-        args.clone().with_program(executable).with_program_args(
-            LIBTEST_ARGS_FOR_DISCOVERED_BINARY
+        GateArgs {
+            program: executable,
+            program_args: LIBTEST_ARGS_FOR_DISCOVERED_BINARY
                 .iter()
                 .map(|arg| String::from(*arg))
                 .collect(),
-        )
+            ..args.clone()
+        }
     }
 }

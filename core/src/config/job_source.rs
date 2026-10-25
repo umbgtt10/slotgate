@@ -31,22 +31,22 @@ impl JobSource {
     // has to know there was ever more than one way to name a job.
     pub fn apply(args: GateArgs) -> Result<GateArgs, ConfigFailure> {
         let jobs = Self::resolve(&args)?;
-        Ok(args.with_jobs(jobs))
+        Ok(GateArgs { jobs, ..args })
     }
 
     pub fn resolve(args: &GateArgs) -> Result<Vec<String>, ConfigFailure> {
         let stated: Vec<&str> = [
-            (!args.jobs().is_empty()).then_some("--jobs"),
-            (!args.jobs_paths().is_empty()).then_some("--jobs-path"),
-            args.jobs_file().is_some().then_some("--jobs-file"),
+            (!args.jobs.is_empty()).then_some("--jobs"),
+            (!args.jobs_paths.is_empty()).then_some("--jobs-path"),
+            args.jobs_file.is_some().then_some("--jobs-file"),
         ]
         .into_iter()
         .flatten()
         .collect();
 
         match stated.as_slice() {
-            ["--jobs"] => Ok(args.jobs().to_vec()),
-            ["--jobs-path"] => TestPathScanner::scan(args.jobs_paths()),
+            ["--jobs"] => Ok(args.jobs.clone()),
+            ["--jobs-path"] => TestPathScanner::scan(&args.jobs_paths),
             ["--jobs-file"] => Self::read(&Self::file_path_of(args)),
             [] => Err(ConfigFailure::NoJobs),
             several => Err(ConfigFailure::SeveralJobLists(
@@ -56,7 +56,7 @@ impl JobSource {
     }
 
     fn file_path_of(args: &GateArgs) -> String {
-        args.jobs_file()
+        args.jobs_file
             .as_ref()
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default()
