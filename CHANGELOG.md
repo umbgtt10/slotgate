@@ -50,6 +50,16 @@ the commit before the split after every step.
   takes it fourth. `PreBuildRunner` and `CompilerArtifactParser` -- the process
   and cargo's JSON -- move unchanged to `slotgate_cli::system::`, where
   `PreBuildRunner` implements the port; serde_json leaves the library.
+- A `Console` port takes every line a run prints, as it happens -- the
+  pre-build's, the seed, the plan, each outcome as its job finishes, the
+  summary, and a configuration failure on stderr: `PreBuildResolver::new` and
+  `JobOrder::new` take one second, and the library prints nothing itself.
+  `GateRunner::new` takes the pre-build, the source tree, the seed source, the
+  clock and the console, in that order, and `run` returns an
+  `execution::gate_verdict::GateVerdict` (`Passed`, `Failed`) instead of an
+  exit code; `RunSummary::exit_code` gives way to `RunSummary::verdict`.
+  `EntryPoint::exit_code` turns the verdict into the process's exit code, and
+  `slotgate_cli::system::std_console::StdConsole` is stdout and stderr.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for

@@ -2,11 +2,11 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use slotgate::execution::gate_verdict::GateVerdict;
 use slotgate::execution::job_outcome::JobOutcome;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::execution::run_summary::RunSummary;
 use std::path::PathBuf;
-use std::process::ExitCode;
 use std::time::Duration;
 
 fn outcome(name: &str, status: JobStatus) -> JobOutcome {
@@ -17,28 +17,6 @@ fn outcome(name: &str, status: JobStatus) -> JobOutcome {
         stdout_path: PathBuf::from("out.log"),
         stderr_path: PathBuf::from("err.log"),
     }
-}
-
-#[test]
-fn exit_code_is_success_only_when_the_run_succeeded() {
-    // Arrange -- this is the process exit code CI branches on.
-    let passed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Passed)]);
-    let failed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Failed)]);
-    let timed_out = RunSummary::from_outcomes(&[outcome("a", JobStatus::TimedOut)]);
-
-    // Act & Assert
-    assert_eq!(
-        format!("{:?}", passed.exit_code()),
-        format!("{:?}", ExitCode::SUCCESS)
-    );
-    assert_eq!(
-        format!("{:?}", failed.exit_code()),
-        format!("{:?}", ExitCode::FAILURE)
-    );
-    assert_eq!(
-        format!("{:?}", timed_out.exit_code()),
-        format!("{:?}", ExitCode::FAILURE)
-    );
 }
 
 #[test]
@@ -147,4 +125,18 @@ fn total_accounts_for_every_outcome_handed_in() {
 
     // Assert
     assert_eq!(summary.total(), outcomes.len());
+}
+
+#[test]
+fn verdict_is_passed_only_when_the_run_succeeded() {
+    // Arrange -- this is the verdict the process exit code CI branches on is
+    // chosen from.
+    let passed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Passed)]);
+    let failed = RunSummary::from_outcomes(&[outcome("a", JobStatus::Failed)]);
+    let timed_out = RunSummary::from_outcomes(&[outcome("a", JobStatus::TimedOut)]);
+
+    // Act & Assert
+    assert_eq!(passed.verdict(), GateVerdict::Passed);
+    assert_eq!(failed.verdict(), GateVerdict::Failed);
+    assert_eq!(timed_out.verdict(), GateVerdict::Failed);
 }

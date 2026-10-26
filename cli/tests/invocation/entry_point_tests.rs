@@ -2,6 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use slotgate::execution::gate_verdict::GateVerdict;
 use slotgate_cli::invocation::entry_point::EntryPoint;
 use slotgate_cli::invocation::gate_args::GateArgs;
 use std::env::temp_dir;
@@ -60,6 +61,24 @@ fn temp_log_dir(test_name: &str) -> PathBuf {
     let dir = temp_dir().join(format!("slotgate_gate_runner_tests_{test_name}"));
     let _ = fs::remove_dir_all(&dir);
     dir
+}
+
+#[test]
+fn exit_code_of_a_failed_gate_is_failure() {
+    // Arrange & Act
+    let code = EntryPoint::exit_code(GateVerdict::Failed);
+
+    // Assert
+    assert!(shows_as(code, ExitCode::FAILURE));
+}
+
+#[test]
+fn exit_code_of_a_passed_gate_is_success() {
+    // Arrange & Act
+    let code = EntryPoint::exit_code(GateVerdict::Passed);
+
+    // Assert
+    assert!(shows_as(code, ExitCode::SUCCESS));
 }
 
 // The whole gate, end to end: real processes, the real clock, the disk and the

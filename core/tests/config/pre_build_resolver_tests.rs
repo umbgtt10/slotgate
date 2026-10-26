@@ -8,6 +8,7 @@
 // the ones written against it there, re-pointed rather than rewritten.
 
 use crate::support::blocking::Blocking;
+use crate::support::recording_console::RecordingConsole;
 use crate::support::scripted_pre_build::ScriptedPreBuild;
 use slotgate::config::config_failure::ConfigFailure;
 use slotgate::config::gate_config::GateConfig;
@@ -40,7 +41,10 @@ fn args_without_pre_build() -> GateConfig {
 }
 
 fn resolver_answering(answer: Result<Option<String>, ConfigFailure>) -> PreBuildResolver {
-    PreBuildResolver::new(Arc::new(ScriptedPreBuild::new(answer)))
+    PreBuildResolver::new(
+        Arc::new(ScriptedPreBuild::new(answer)),
+        Arc::new(RecordingConsole::new()),
+    )
 }
 
 // The command it runs is the one configured, asked for the configured target.
@@ -48,7 +52,7 @@ fn resolver_answering(answer: Result<Option<String>, ConfigFailure>) -> PreBuild
 fn resolve_pre_build_asks_the_pre_build_for_the_configured_target() {
     // Arrange
     let pre_build = Arc::new(ScriptedPreBuild::new(Ok(None)));
-    let resolver = PreBuildResolver::new(pre_build.clone());
+    let resolver = PreBuildResolver::new(pre_build.clone(), Arc::new(RecordingConsole::new()));
 
     // Act
     let _ = Blocking::on(resolver.resolve(&args_with_pre_build(Some("all_tests"))));
@@ -95,6 +99,34 @@ fn resolve_pre_build_that_discovers_nothing_returns_the_arguments_unchanged() {
     // Assert
     assert_eq!(resolved.program, args.program);
     assert_eq!(resolved.program_args, args.program_args);
+}
+
+// Said before the build starts, so a long build is not a silent one, and the
+// binary it found is named once it is done.
+#[test]
+fn resolve_pre_build_with_a_discovered_binary_prints_the_command_and_the_binary() {
+    // Arrange
+    let console = Arc::new(RecordingConsole::new());
+    let resolver = PreBuildResolver::new(
+        Arc::new(ScriptedPreBuild::new(Ok(Some(String::from(
+            "target/all_tests-abc",
+        ))))),
+        console.clone(),
+    );
+
+    // Act
+    let _ = Blocking::on(resolver.resolve(&args_with_pre_build(Some("all_tests"))));
+
+    // Assert
+    assert_eq!(
+        console.lines(),
+        [
+            "stdout: SLOTGATE — PRE-BUILD: cargo test --no-run",
+            "stdout: ",
+            "stdout: SLOTGATE — PRE-BUILD discovered test binary: target/all_tests-abc",
+            "stdout: "
+        ]
+    );
 }
 
 // The binary it found is every job's program, run one exact test at a time.

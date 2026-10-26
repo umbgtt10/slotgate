@@ -5,6 +5,7 @@
 use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
 use crate::time::seed_source::SeedSource;
+use crate::traits::console::Console;
 use std::sync::Arc;
 
 // The order the jobs are handed to the pool.
@@ -25,6 +26,7 @@ use std::sync::Arc;
 // twice.
 pub struct JobOrder {
     seeds: Arc<dyn SeedSource>,
+    console: Arc<dyn Console>,
 }
 
 impl JobOrder {
@@ -32,8 +34,8 @@ impl JobOrder {
     const MIX_A: u64 = 0xbf58_476d_1ce4_e5b9;
     const MIX_B: u64 = 0x94d0_49bb_1331_11eb;
 
-    pub fn new(seeds: Arc<dyn SeedSource>) -> Self {
-        Self { seeds }
+    pub fn new(seeds: Arc<dyn SeedSource>, console: Arc<dyn Console>) -> Self {
+        Self { seeds, console }
     }
 
     // Shuffled only when asked, and the seed is always printed. Without
@@ -44,8 +46,10 @@ impl JobOrder {
             return jobs;
         }
         let seed = args.seed.unwrap_or_else(|| self.seeds.draw());
-        println!("SLOTGATE — RANDOM ORDER, seed {seed} (replay with --seed {seed})");
-        println!();
+        self.console.print_line(&format!(
+            "SLOTGATE — RANDOM ORDER, seed {seed} (replay with --seed {seed})"
+        ));
+        self.console.print_line("");
         Self::shuffle(jobs, seed)
     }
 

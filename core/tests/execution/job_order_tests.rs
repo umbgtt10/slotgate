@@ -8,6 +8,7 @@
 // different seeds generally do not. Without the first a failing run cannot be
 // re-run, which is worse than not shuffling at all.
 
+use crate::support::recording_console::RecordingConsole;
 use crate::time::seed_source_tests::FakeSeedSource;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::execution::job::Job;
@@ -51,8 +52,11 @@ fn apply_with_random_and_a_seed_returns_that_seeds_order() {
     let expected = names(&JobOrder::shuffle(jobs(30), 4242));
 
     // Act
-    let applied = JobOrder::new(Arc::new(FakeSeedSource::new(1)))
-        .apply(jobs(30), &args_with(true, Some(4242)));
+    let applied = JobOrder::new(
+        Arc::new(FakeSeedSource::new(1)),
+        Arc::new(RecordingConsole::new()),
+    )
+    .apply(jobs(30), &args_with(true, Some(4242)));
 
     // Assert
     assert_eq!(names(&applied), expected);
@@ -66,8 +70,11 @@ fn apply_with_random_and_no_seed_shuffles_with_the_seed_it_draws() {
     let expected = names(&JobOrder::shuffle(jobs(30), 4242));
 
     // Act
-    let applied =
-        JobOrder::new(Arc::new(FakeSeedSource::new(4242))).apply(jobs(30), &args_with(true, None));
+    let applied = JobOrder::new(
+        Arc::new(FakeSeedSource::new(4242)),
+        Arc::new(RecordingConsole::new()),
+    )
+    .apply(jobs(30), &args_with(true, None));
 
     // Assert
     assert_eq!(names(&applied), expected);
@@ -80,13 +87,47 @@ fn apply_with_random_and_no_seed_still_returns_every_job() {
     let mut original = names(&jobs(30));
 
     // Act
-    let applied = JobOrder::new(Arc::new(WallClockSeed)).apply(jobs(30), &args_with(true, None));
+    let applied = JobOrder::new(Arc::new(WallClockSeed), Arc::new(RecordingConsole::new()))
+        .apply(jobs(30), &args_with(true, None));
 
     // Assert
     let mut sorted = names(&applied);
     sorted.sort();
     original.sort();
     assert_eq!(sorted, original);
+}
+
+// The seed is printed every time it shuffles, so the run can be replayed.
+#[test]
+fn apply_with_random_prints_the_seed_it_shuffled_with() {
+    // Arrange
+    let console = Arc::new(RecordingConsole::new());
+    let order = JobOrder::new(Arc::new(FakeSeedSource::new(4242)), console.clone());
+
+    // Act
+    order.apply(jobs(3), &args_with(true, None));
+
+    // Assert
+    assert_eq!(
+        console.lines(),
+        [
+            "stdout: SLOTGATE — RANDOM ORDER, seed 4242 (replay with --seed 4242)",
+            "stdout: "
+        ]
+    );
+}
+
+#[test]
+fn apply_without_random_prints_nothing() {
+    // Arrange
+    let console = Arc::new(RecordingConsole::new());
+    let order = JobOrder::new(Arc::new(FakeSeedSource::new(4242)), console.clone());
+
+    // Act
+    order.apply(jobs(3), &args_with(false, Some(7)));
+
+    // Assert
+    assert!(console.lines().is_empty(), "{:?}", console.lines());
 }
 
 // Off by default, so an ordinary run is exactly as it was.
@@ -96,8 +137,11 @@ fn apply_without_random_returns_the_jobs_untouched() {
     let original = names(&jobs(20));
 
     // Act
-    let applied =
-        JobOrder::new(Arc::new(FakeSeedSource::new(1))).apply(jobs(20), &args_with(false, Some(7)));
+    let applied = JobOrder::new(
+        Arc::new(FakeSeedSource::new(1)),
+        Arc::new(RecordingConsole::new()),
+    )
+    .apply(jobs(20), &args_with(false, Some(7)));
 
     // Assert
     assert_eq!(names(&applied), original);

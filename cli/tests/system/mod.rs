@@ -6,3 +6,4 @@ pub mod compiler_artifact_parser_tests;
 pub mod disk_source_tree_tests;
 pub mod pre_build_runner_tests;
 pub mod rust_file_finder_tests;
+pub mod std_console_tests;

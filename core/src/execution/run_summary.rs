@@ -2,9 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use crate::execution::gate_verdict::GateVerdict;
 use crate::execution::job_outcome::JobOutcome;
 use crate::execution::job_status::JobStatus;
-use std::process::ExitCode;
 
 pub struct RunSummary {
     passed: usize,
@@ -27,14 +27,6 @@ impl RunSummary {
             }
         }
         summary
-    }
-
-    pub fn exit_code(&self) -> ExitCode {
-        if self.is_success() {
-            ExitCode::SUCCESS
-        } else {
-            ExitCode::FAILURE
-        }
     }
 
     pub fn failed(&self) -> usize {
@@ -65,5 +57,13 @@ impl RunSummary {
 
     pub fn total(&self) -> usize {
         self.passed + self.failed + self.timed_out
+    }
+
+    pub fn verdict(&self) -> GateVerdict {
+        if self.is_success() {
+            GateVerdict::Passed
+        } else {
+            GateVerdict::Failed
+        }
     }
 }

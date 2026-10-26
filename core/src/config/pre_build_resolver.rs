@@ -4,6 +4,7 @@
 
 use crate::config::config_failure::ConfigFailure;
 use crate::config::gate_config::GateConfig;
+use crate::traits::console::Console;
 use crate::traits::pre_build::PreBuild;
 use std::sync::Arc;
 
@@ -17,11 +18,12 @@ const LIBTEST_ARGS_FOR_DISCOVERED_BINARY: [&str; 3] = ["{job}", "--exact", "--te
 // come from -- and `GateRunner` is left orchestrating.
 pub struct PreBuildResolver {
     pre_build: Arc<dyn PreBuild>,
+    console: Arc<dyn Console>,
 }
 
 impl PreBuildResolver {
-    pub fn new(pre_build: Arc<dyn PreBuild>) -> Self {
-        Self { pre_build }
+    pub fn new(pre_build: Arc<dyn PreBuild>, console: Arc<dyn Console>) -> Self {
+        Self { pre_build, console }
     }
 
     /// Without a pre-build program the arguments pass through untouched.
@@ -31,10 +33,10 @@ impl PreBuildResolver {
             return Ok(args.clone());
         };
 
-        println!(
+        self.console.print_line(&format!(
             "SLOTGATE — PRE-BUILD: {pre_build_program} {}",
             args.pre_build_args.join(" ")
-        );
+        ));
         let discovered = self
             .pre_build
             .discover(
@@ -43,14 +45,16 @@ impl PreBuildResolver {
                 args.pre_build_target_name.as_deref(),
             )
             .await?;
-        println!();
+        self.console.print_line("");
 
         let Some(executable) = discovered else {
             return Ok(args.clone());
         };
 
-        println!("SLOTGATE — PRE-BUILD discovered test binary: {executable}");
-        println!();
+        self.console.print_line(&format!(
+            "SLOTGATE — PRE-BUILD discovered test binary: {executable}"
+        ));
+        self.console.print_line("");
 
         Ok(Self::with_discovered_binary(args, executable))
     }

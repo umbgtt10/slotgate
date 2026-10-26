@@ -4,4 +4,5 @@
 
 pub mod blocking;
 pub mod in_memory_source_tree;
+pub mod recording_console;
 pub mod scripted_pre_build;

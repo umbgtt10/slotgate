@@ -2,5 +2,6 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+pub mod console;
 pub mod pre_build;
 pub mod source_tree;
