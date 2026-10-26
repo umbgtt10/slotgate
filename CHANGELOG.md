@@ -90,6 +90,8 @@ the commit before the split after every step.
   macro, a file-system method or `extern crate std`. It needs no installed
   tool. dry4rust runs once from the workspace root over both published
   crates' sources; crap4rust, twin4rust and iceberg4rust measure both.
+  `.cargo/mutants.toml` scopes cargo-mutants to `core/src`, each mutant tested
+  by core's own tests only.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for

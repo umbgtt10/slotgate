@@ -86,7 +86,7 @@ core's tests only.
 | S6 | the runtime leaves core: the `JobLauncher`, `RunningJob` and `JobExecutor` ports, `JobWatch`; the executor, the slot pool, the clock and the seed go to cli; tokio leaves core | done |
 | S7 | `#![no_std]` | done |
 | S8 | the technology-free gate, first in stage 2 | done |
-| S9 | `.cargo/mutants.toml` | |
+| S9 | `.cargo/mutants.toml` | done |
 | S10 | docs, and this record moves to `docs/history/` | |
 
 ## Tests that move
