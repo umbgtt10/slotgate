@@ -2,4 +2,6 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+pub mod blocking;
 pub mod in_memory_source_tree;
+pub mod scripted_pre_build;

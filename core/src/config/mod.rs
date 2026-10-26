@@ -2,14 +2,12 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-pub mod compiler_artifact_parser;
 pub mod config_failure;
 pub mod gate_config;
 pub mod job_list_builder;
 pub mod job_source;
 pub mod module_path;
 pub mod pre_build_resolver;
-pub mod pre_build_runner;
 pub mod read_failure;
 pub mod rust_file;
 pub mod test_name_reader;

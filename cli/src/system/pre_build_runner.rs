@@ -2,8 +2,10 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::config::compiler_artifact_parser::CompilerArtifactParser;
-use crate::config::config_failure::ConfigFailure;
+use crate::system::compiler_artifact_parser::CompilerArtifactParser;
+use slotgate::config::config_failure::ConfigFailure;
+use slotgate::traits::pre_build::PreBuild;
+use std::pin::Pin;
 use tokio::process::Command;
 
 pub struct PreBuildRunner;
@@ -32,5 +34,16 @@ impl PreBuildRunner {
             &stdout,
             target_name,
         ))
+    }
+}
+
+impl PreBuild for PreBuildRunner {
+    fn discover<'a>(
+        &'a self,
+        program: &'a str,
+        args: &'a [String],
+        target_name: Option<&'a str>,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<String>, ConfigFailure>> + Send + 'a>> {
+        Box::pin(Self::run(program, args, target_name))
     }
 }

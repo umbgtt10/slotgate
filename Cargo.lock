@@ -243,6 +243,7 @@ name = "slotgate"
 version = "0.6.1"
 dependencies = [
  "clap",
+ "serde_json",
  "slotgate-core",
  "tokio",
 ]
@@ -251,7 +252,6 @@ dependencies = [
 name = "slotgate-core"
 version = "0.6.1"
 dependencies = [
- "serde_json",
  "tokio",
 ]
 

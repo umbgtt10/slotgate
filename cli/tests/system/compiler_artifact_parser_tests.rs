@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::config::compiler_artifact_parser::CompilerArtifactParser;
+use slotgate_cli::system::compiler_artifact_parser::CompilerArtifactParser;
 
 fn artifact_line(target_name: &str, is_test_profile: bool, executable: Option<&str>) -> String {
     let executable_json = match executable {

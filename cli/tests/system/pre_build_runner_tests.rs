@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::config::pre_build_runner::PreBuildRunner;
+use slotgate_cli::system::pre_build_runner::PreBuildRunner;
 use std::env::temp_dir;
 use std::fs;
 

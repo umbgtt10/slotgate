@@ -14,6 +14,7 @@ use crate::execution::run_summary::RunSummary;
 use crate::ports::port_range_allocator::PortRangeAllocator;
 use crate::time::job_clock::JobClock;
 use crate::time::seed_source::SeedSource;
+use crate::traits::pre_build::PreBuild;
 use crate::traits::source_tree::SourceTree;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -23,6 +24,7 @@ pub struct GateRunner {
     clock: Arc<dyn JobClock>,
     seeds: Arc<dyn SeedSource>,
     source: JobSource,
+    resolver: PreBuildResolver,
 }
 
 impl GateRunner {
@@ -30,11 +32,13 @@ impl GateRunner {
         clock: Arc<dyn JobClock>,
         seeds: Arc<dyn SeedSource>,
         tree: Arc<dyn SourceTree>,
+        pre_build: Arc<dyn PreBuild>,
     ) -> Self {
         Self {
             clock,
             seeds,
             source: JobSource::new(tree),
+            resolver: PreBuildResolver::new(pre_build),
         }
     }
 
@@ -43,7 +47,9 @@ impl GateRunner {
         // way, so they share one exit rather than repeating it. The pre-build
         // error is labelled where it is raised instead of where it is printed,
         // which is what lets the two join.
-        let effective_args = match PreBuildResolver::resolve(&args)
+        let effective_args = match self
+            .resolver
+            .resolve(&args)
             .await
             .and_then(|resolved| self.source.apply(resolved))
         {

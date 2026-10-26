@@ -44,6 +44,12 @@ the commit before the split after every step.
   tree third. `RustFileFinder` moves to `slotgate_cli::system::rust_file_finder`
   and fails with a `ReadFailure`; `slotgate_cli::system::disk_source_tree::
   DiskSourceTree` is the real file system behind the port.
+- A `PreBuild` port runs the one-time setup command and names the test
+  executable it built, if any: `PreBuildResolver` is built with one
+  (`new(Arc<dyn PreBuild>)`) and its `resolve` is a method. `GateRunner::new`
+  takes it fourth. `PreBuildRunner` and `CompilerArtifactParser` -- the process
+  and cargo's JSON -- move unchanged to `slotgate_cli::system::`, where
+  `PreBuildRunner` implements the port; serde_json leaves the library.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for
