@@ -60,6 +60,27 @@ the commit before the split after every step.
   exit code; `RunSummary::exit_code` gives way to `RunSummary::verdict`.
   `EntryPoint::exit_code` turns the verdict into the process's exit code, and
   `slotgate_cli::system::std_console::StdConsole` is stdout and stderr.
+- The runtime leaves the library, which now depends on nothing. Three ports
+  take its place: `JobLauncher` starts a job's process from a
+  `execution::launch_request::LaunchRequest` -- the program, its arguments,
+  the environment it is handed (`execution::environment_variable::
+  EnvironmentVariable`) and its log directory's name -- and hands back an
+  `execution::launched_job::LaunchedJob`, a `RunningJob` to wait on, kill and
+  read the stdout of, with its log paths; `JobExecutor` runs every job, as many
+  at once as there are slots. `JobRunner::new` takes a launcher where it took a
+  log directory and decides what a job is handed; a new
+  `execution::job_watch::JobWatch` races the job's wait against the clock's
+  deadline -- the wait first, so a job that has exited is judged by its exit --,
+  kills it when its time is up, and judges a run of no tests a failure.
+  `JobOutcome`'s `stdout_path` and `stderr_path` are `String`s.
+  `GateRunner::new` takes an executor where it took a clock. `JobClock` and
+  `SeedSource` move from `time` to `traits`; `time` is gone.
+- `Executor`, `SlotPool` and `SlotGuard` move unchanged to
+  `slotgate_cli::execution::`, where `Executor` implements `JobExecutor`;
+  `TokioJobClock` and `WallClockSeed` to `slotgate_cli::system::`. The
+  process is cli's `ProcessJobLauncher` -- the log directory, its two files,
+  `SLOTGATE_JOB_LOG_DIR` and the spawn -- and `ChildProcess`. tokio leaves
+  the library.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for

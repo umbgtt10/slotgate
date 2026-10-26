@@ -6,7 +6,6 @@ use slotgate::execution::gate_verdict::GateVerdict;
 use slotgate::execution::job_outcome::JobOutcome;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::execution::run_summary::RunSummary;
-use std::path::PathBuf;
 use std::time::Duration;
 
 fn outcome(name: &str, status: JobStatus) -> JobOutcome {
@@ -14,8 +13,8 @@ fn outcome(name: &str, status: JobStatus) -> JobOutcome {
         job_name: String::from(name),
         status,
         duration: Duration::from_millis(1),
-        stdout_path: PathBuf::from("out.log"),
-        stderr_path: PathBuf::from("err.log"),
+        stdout_path: String::from("out.log"),
+        stderr_path: String::from("err.log"),
     }
 }
 

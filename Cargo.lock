@@ -251,9 +251,6 @@ dependencies = [
 [[package]]
 name = "slotgate-core"
 version = "0.6.1"
-dependencies = [
- "tokio",
-]
 
 [[package]]
 name = "socket2"

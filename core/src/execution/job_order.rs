@@ -4,8 +4,8 @@
 
 use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
-use crate::time::seed_source::SeedSource;
 use crate::traits::console::Console;
+use crate::traits::seed_source::SeedSource;
 use std::sync::Arc;
 
 // The order the jobs are handed to the pool.

@@ -2,12 +2,13 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::execution::executor::Executor;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_runner::JobRunner;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::ports::port_range_allocator::PortRangeAllocator;
-use slotgate::time::tokio_job_clock::TokioJobClock;
+use slotgate_cli::execution::executor::Executor;
+use slotgate_cli::system::process_job_launcher::ProcessJobLauncher;
+use slotgate_cli::system::tokio_job_clock::TokioJobClock;
 use std::collections::BTreeSet;
 use std::env::temp_dir;
 use std::fs;
@@ -48,7 +49,7 @@ fn executor_with_timeout(max_parallel: usize, timeout: Duration, log_dir: PathBu
     let job_runner = JobRunner::new(
         String::from("PORT_RANGE_BASE"),
         String::from("PORT_RANGE_COUNT"),
-        log_dir,
+        Arc::new(ProcessJobLauncher::new(log_dir)),
         Arc::new(TokioJobClock::new(timeout)),
     );
     Executor::new(max_parallel, port_allocator, job_runner)

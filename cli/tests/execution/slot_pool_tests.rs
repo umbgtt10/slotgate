@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::execution::slot_pool::SlotPool;
+use slotgate_cli::execution::slot_pool::SlotPool;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;

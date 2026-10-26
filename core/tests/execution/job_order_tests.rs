@@ -8,12 +8,11 @@
 // different seeds generally do not. Without the first a failing run cannot be
 // re-run, which is worse than not shuffling at all.
 
+use crate::support::fake_seed_source::FakeSeedSource;
 use crate::support::recording_console::RecordingConsole;
-use crate::time::seed_source_tests::FakeSeedSource;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_order::JobOrder;
-use slotgate::time::wall_clock_seed::WallClockSeed;
 use std::sync::Arc;
 
 fn args_with(random: bool, seed: Option<u64>) -> GateConfig {
@@ -87,8 +86,11 @@ fn apply_with_random_and_no_seed_still_returns_every_job() {
     let mut original = names(&jobs(30));
 
     // Act
-    let applied = JobOrder::new(Arc::new(WallClockSeed), Arc::new(RecordingConsole::new()))
-        .apply(jobs(30), &args_with(true, None));
+    let applied = JobOrder::new(
+        Arc::new(FakeSeedSource::new(98_765)),
+        Arc::new(RecordingConsole::new()),
+    )
+    .apply(jobs(30), &args_with(true, None));
 
     // Assert
     let mut sorted = names(&applied);

@@ -2,50 +2,11 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::time::job_clock::JobClock;
-use std::future::Future;
-use std::future::pending;
-use std::future::ready;
-use std::pin::Pin;
-use std::sync::Mutex;
+use crate::support::fake_job_clock::FakeJobClock;
+use slotgate::traits::job_clock::JobClock;
 use std::task::Context;
 use std::task::Waker;
 use std::time::Duration;
-
-// The seam the job runner times a job through. Lives here, beside the trait it
-// implements, so the runner's tests share one fake: a clock that reads what it
-// is told to, in turn, and whose deadlines are up at once or never.
-pub struct FakeJobClock {
-    readings: Mutex<Vec<Duration>>,
-    expires: bool,
-}
-
-impl FakeJobClock {
-    pub fn new(readings: &[Duration], expires: bool) -> Self {
-        Self {
-            readings: Mutex::new(readings.iter().rev().copied().collect()),
-            expires,
-        }
-    }
-}
-
-impl JobClock for FakeJobClock {
-    fn deadline(&self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        if self.expires {
-            Box::pin(ready(()))
-        } else {
-            Box::pin(pending())
-        }
-    }
-
-    fn now(&self) -> Duration {
-        self.readings
-            .lock()
-            .expect("the readings lock")
-            .pop()
-            .unwrap_or_default()
-    }
-}
 
 #[test]
 fn deadline_of_a_fake_that_expires_is_up_at_once() {

@@ -26,3 +26,6 @@ clap = { workspace = true }
 serde_json = { workspace = true }
 slotgate-core = { workspace = true }
 tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

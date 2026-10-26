@@ -2,9 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use std::future::Future;
-use std::pin::Pin;
-use std::time::Duration;
+use core::future::Future;
+use core::pin::Pin;
+use core::time::Duration;
 
 // What a job is timed by: a reading on the clock's own monotonic scale, whose
 // differences are durations, and a deadline that resolves once a job's time is

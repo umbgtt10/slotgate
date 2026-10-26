@@ -2,7 +2,8 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-pub mod job_clock;
-pub mod seed_source;
-pub mod tokio_job_clock;
-pub mod wall_clock_seed;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnvironmentVariable {
+    pub name: String,
+    pub value: String,
+}

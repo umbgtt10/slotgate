@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::time::seed_source::SeedSource;
+use slotgate::traits::seed_source::SeedSource;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 

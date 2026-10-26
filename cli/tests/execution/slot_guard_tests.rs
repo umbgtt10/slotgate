@@ -2,8 +2,8 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::execution::slot_guard::SlotGuard;
-use slotgate::execution::slot_pool::SlotPool;
+use slotgate_cli::execution::slot_guard::SlotGuard;
+use slotgate_cli::execution::slot_pool::SlotPool;
 use std::collections::VecDeque;
 use std::sync::Mutex;
 use std::time::Duration;

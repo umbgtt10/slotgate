@@ -22,7 +22,7 @@ impl OutcomeLine {
         match outcome.status {
             JobStatus::Passed => headline,
             JobStatus::Failed | JobStatus::TimedOut => {
-                format!("{headline}\n         {}", outcome.stdout_path.display())
+                format!("{headline}\n         {}", outcome.stdout_path)
             }
         }
     }

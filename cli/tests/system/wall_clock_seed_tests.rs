@@ -2,8 +2,8 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use slotgate::time::seed_source::SeedSource;
-use slotgate::time::wall_clock_seed::WallClockSeed;
+use slotgate::traits::seed_source::SeedSource;
+use slotgate_cli::system::wall_clock_seed::WallClockSeed;
 
 // Zero only for a clock set before the epoch, which is the one way the draw
 // can fail.

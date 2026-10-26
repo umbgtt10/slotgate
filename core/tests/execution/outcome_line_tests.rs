@@ -5,7 +5,6 @@
 use slotgate::execution::job_outcome::JobOutcome;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::execution::outcome_line::OutcomeLine;
-use std::path::PathBuf;
 use std::time::Duration;
 
 fn outcome(status: JobStatus) -> JobOutcome {
@@ -13,10 +12,10 @@ fn outcome(status: JobStatus) -> JobOutcome {
         job_name: String::from("cluster::byzantine_tests::duplicate_prepare"),
         status,
         duration: Duration::from_millis(28_510),
-        stdout_path: PathBuf::from(
+        stdout_path: String::from(
             "logs/run/cluster__byzantine_tests__duplicate_prepare/stdout.log",
         ),
-        stderr_path: PathBuf::from(
+        stderr_path: String::from(
             "logs/run/cluster__byzantine_tests__duplicate_prepare/stderr.log",
         ),
     }

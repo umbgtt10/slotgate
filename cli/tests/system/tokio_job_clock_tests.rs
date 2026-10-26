@@ -6,8 +6,8 @@
 // only when every task is idle, by exactly as much as a deadline asks. Its
 // limit is its own, set where it is built.
 
-use slotgate::time::job_clock::JobClock;
-use slotgate::time::tokio_job_clock::TokioJobClock;
+use slotgate::traits::job_clock::JobClock;
+use slotgate_cli::system::tokio_job_clock::TokioJobClock;
 use std::time::Duration;
 
 #[tokio::test(start_paused = true)]

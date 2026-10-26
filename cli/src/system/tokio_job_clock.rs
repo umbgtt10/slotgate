@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::time::job_clock::JobClock;
+use slotgate::traits::job_clock::JobClock;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::OnceLock;

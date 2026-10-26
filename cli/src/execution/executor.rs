@@ -2,11 +2,13 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::execution::job::Job;
-use crate::execution::job_outcome::JobOutcome;
-use crate::execution::job_runner::JobRunner;
 use crate::execution::slot_pool::SlotPool;
-use crate::ports::port_range_allocator::PortRangeAllocator;
+use slotgate::execution::job::Job;
+use slotgate::execution::job_outcome::JobOutcome;
+use slotgate::execution::job_runner::JobRunner;
+use slotgate::ports::port_range_allocator::PortRangeAllocator;
+use slotgate::traits::job_executor::JobExecutor;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::spawn;
 
@@ -54,5 +56,15 @@ impl Executor {
             outcomes.push(handle.await.expect("job task panicked"));
         }
         outcomes
+    }
+}
+
+impl JobExecutor for Executor {
+    fn execute(
+        &self,
+        jobs: Vec<Job>,
+        on_outcome: Arc<dyn Fn(&JobOutcome) + Send + Sync>,
+    ) -> Pin<Box<dyn Future<Output = Vec<JobOutcome>> + Send + '_>> {
+        Box::pin(self.run_all(jobs, move |outcome| on_outcome(outcome)))
     }
 }
