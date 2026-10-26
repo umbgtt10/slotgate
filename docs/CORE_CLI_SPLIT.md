@@ -85,7 +85,7 @@ core's tests only.
 | S5 | the `Console` port and `GateVerdict`: every line through the port, the exit code in `EntryPoint` | done |
 | S6 | the runtime leaves core: the `JobLauncher`, `RunningJob` and `JobExecutor` ports, `JobWatch`; the executor, the slot pool, the clock and the seed go to cli; tokio leaves core | done |
 | S7 | `#![no_std]` | done |
-| S8 | the technology-free gate, first in stage 2 | |
+| S8 | the technology-free gate, first in stage 2 | done |
 | S9 | `.cargo/mutants.toml` | |
 | S10 | docs, and this record moves to `docs/history/` | |
 

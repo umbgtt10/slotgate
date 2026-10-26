@@ -83,6 +83,13 @@ the commit before the split after every step.
   the library.
 - The library is `#![no_std]`: it allocates through `alloc` and depends on no
   crate, so nothing links the standard library into it.
+- Development: stage 2 opens with a "Technology-free core" gate. The core's
+  manifest may name no crate in any section, its crate root must carry
+  `#![no_std]` and `#![forbid(unsafe_code)]`, and no file under `core/src` or
+  `core/tests` may reach `std::{env,fs,io,net,os,process,thread}`, a printing
+  macro, a file-system method or `extern crate std`. It needs no installed
+  tool. dry4rust runs once from the workspace root over both published
+  crates' sources; crap4rust, twin4rust and iceberg4rust measure both.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for
