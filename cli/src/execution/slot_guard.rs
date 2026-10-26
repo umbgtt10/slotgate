@@ -2,18 +2,23 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use slotgate::traits::held_slot::HeldSlot;
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::sync::Mutex;
-use tokio::sync::SemaphorePermit;
+use tokio::sync::OwnedSemaphorePermit;
 
-pub struct SlotGuard<'a> {
-    free_slots: &'a Mutex<VecDeque<usize>>,
+// A slot and the permit that bounds it, held together and given back together:
+// dropping the guard returns its own index to the free list, and the permit
+// with it. It owns both, so it can travel into the task that waits for its job.
+pub struct SlotGuard {
+    free_slots: Arc<Mutex<VecDeque<usize>>>,
     slot_index: usize,
-    _permit: SemaphorePermit<'a>,
+    _permit: OwnedSemaphorePermit,
 }
 
-impl<'a> SlotGuard<'a> {
-    pub fn take(free_slots: &'a Mutex<VecDeque<usize>>, permit: SemaphorePermit<'a>) -> Self {
+impl SlotGuard {
+    pub fn take(free_slots: Arc<Mutex<VecDeque<usize>>>, permit: OwnedSemaphorePermit) -> Self {
         let slot_index = free_slots
             .lock()
             .expect("free_slots lock poisoned")
@@ -31,11 +36,17 @@ impl<'a> SlotGuard<'a> {
     }
 }
 
-impl Drop for SlotGuard<'_> {
+impl Drop for SlotGuard {
     fn drop(&mut self) {
         self.free_slots
             .lock()
             .expect("free_slots lock poisoned")
             .push_back(self.slot_index);
+    }
+}
+
+impl HeldSlot for SlotGuard {
+    fn index(&self) -> usize {
+        self.slot_index
     }
 }

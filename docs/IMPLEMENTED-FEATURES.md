@@ -16,6 +16,13 @@ released versions see [CHANGELOG.md](../CHANGELOG.md).
   scopes mutation testing to the core
 - The command line, its output, the job logs and the exit codes are unchanged
 
+### Job order
+
+- Jobs start in the order they are handed to the slot pool -- with `--random`,
+  the seeded order -- at every `--max-parallel`: the slots are taken one job at
+  a time, in that order, and each job's process is started as soon as it holds
+  one. The same seed starts the jobs in the same order every run
+
 ## Version 0.6.1
 
 ### Quality gates

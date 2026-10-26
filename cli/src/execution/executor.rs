@@ -3,19 +3,20 @@
 // SPDX-License-Identifier: MIT
 
 use crate::execution::slot_pool::SlotPool;
+use crate::execution::tokio_task_spawner::TokioTaskSpawner;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_outcome::JobOutcome;
 use slotgate::execution::job_runner::JobRunner;
+use slotgate::execution::job_scheduler::JobScheduler;
 use slotgate::ports::port_range_allocator::PortRangeAllocator;
 use slotgate::traits::job_executor::JobExecutor;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::spawn;
 
+// The core's scheduler on Tokio: its slots a semaphore of `max_parallel`
+// permits, its tasks Tokio's.
 pub struct Executor {
-    slot_pool: Arc<SlotPool>,
-    port_allocator: Arc<PortRangeAllocator>,
-    job_runner: Arc<JobRunner>,
+    scheduler: JobScheduler,
 }
 
 impl Executor {
@@ -25,9 +26,12 @@ impl Executor {
         job_runner: JobRunner,
     ) -> Self {
         Self {
-            slot_pool: Arc::new(SlotPool::new(max_parallel)),
-            port_allocator: Arc::new(port_allocator),
-            job_runner: Arc::new(job_runner),
+            scheduler: JobScheduler::new(
+                Arc::new(SlotPool::new(max_parallel)),
+                Arc::new(TokioTaskSpawner),
+                port_allocator,
+                job_runner,
+            ),
         }
     }
 
@@ -35,27 +39,7 @@ impl Executor {
     where
         F: Fn(&JobOutcome) + Send + Sync + 'static,
     {
-        let on_outcome = Arc::new(on_outcome);
-        let mut handles = Vec::new();
-        for job in jobs {
-            let slot_pool = Arc::clone(&self.slot_pool);
-            let port_allocator = Arc::clone(&self.port_allocator);
-            let job_runner = Arc::clone(&self.job_runner);
-            let on_outcome = Arc::clone(&on_outcome);
-            handles.push(spawn(async move {
-                let guard = slot_pool.acquire().await;
-                let port_range = port_allocator.range_for_slot(guard.slot_index());
-                let outcome = job_runner.run(&job, &port_range).await;
-                on_outcome(&outcome);
-                outcome
-            }));
-        }
-
-        let mut outcomes = Vec::new();
-        for handle in handles {
-            outcomes.push(handle.await.expect("job task panicked"));
-        }
-        outcomes
+        self.scheduler.run_all(jobs, Arc::new(on_outcome)).await
     }
 }
 
@@ -65,6 +49,6 @@ impl JobExecutor for Executor {
         jobs: Vec<Job>,
         on_outcome: Arc<dyn Fn(&JobOutcome) + Send + Sync>,
     ) -> Pin<Box<dyn Future<Output = Vec<JobOutcome>> + Send + '_>> {
-        Box::pin(self.run_all(jobs, move |outcome| on_outcome(outcome)))
+        Box::pin(self.scheduler.run_all(jobs, on_outcome))
     }
 }

@@ -42,6 +42,21 @@ fn variable(name: &str, value: &str) -> EnvironmentVariable {
     }
 }
 
+#[test]
+fn finish_of_a_started_job_reports_how_it_ended() {
+    // Arrange
+    let launcher = Arc::new(ScriptedJobLauncher::new(Some(false), None));
+    let runner = runner_over(&launcher, FakeJobClock::new(&[], false));
+    let started = runner.start(&job("alpha"), &PortRange::new(31800, 10));
+
+    // Act
+    let outcome = Blocking::on(runner.finish(started));
+
+    // Assert
+    assert_eq!(outcome.job_name, "alpha");
+    assert_eq!(outcome.status, JobStatus::Failed);
+}
+
 // The slot's window under the names the job reads it by, and the job's own
 // name as it was given -- not the directory-safe spelling of it.
 #[test]
@@ -144,4 +159,20 @@ fn run_reports_the_log_paths_the_launcher_chose() {
     // Assert
     assert_eq!(outcome.stdout_path, "logs/alpha/stdout.log");
     assert_eq!(outcome.stderr_path, "logs/alpha/stderr.log");
+}
+
+// Starting a job starts its process there and then; waiting for it is
+// finish's, so a caller decides the order jobs start in by the order it
+// starts them.
+#[test]
+fn start_hands_the_launcher_the_job_before_anything_waits_for_it() {
+    // Arrange
+    let launcher = Arc::new(ScriptedJobLauncher::new(None, None));
+    let runner = runner_over(&launcher, FakeJobClock::new(&[], false));
+
+    // Act
+    let _started = runner.start(&job("alpha"), &PortRange::new(31800, 10));
+
+    // Assert
+    assert_eq!(launcher.requests().len(), 1);
 }

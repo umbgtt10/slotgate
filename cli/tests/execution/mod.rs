@@ -5,3 +5,4 @@
 pub mod executor_tests;
 pub mod slot_guard_tests;
 pub mod slot_pool_tests;
+pub mod tokio_task_spawner_tests;

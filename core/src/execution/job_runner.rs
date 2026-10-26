@@ -9,6 +9,7 @@ use crate::execution::job_outcome::JobOutcome;
 use crate::execution::job_watch::JobWatch;
 use crate::execution::launch_request::LaunchRequest;
 use crate::execution::launched_job::LaunchedJob;
+use crate::execution::started_job::StartedJob;
 use crate::ports::port_range::PortRange;
 use crate::traits::job_clock::JobClock;
 use crate::traits::job_launcher::JobLauncher;
@@ -44,23 +45,38 @@ impl JobRunner {
         }
     }
 
-    pub async fn run(&self, job: &Job, port_range: &PortRange) -> JobOutcome {
-        let started = self.clock.now();
+    // Waits for a started job to end and says how it did, and how long it took.
+    pub async fn finish(&self, started: StartedJob) -> JobOutcome {
         let LaunchedJob {
             process,
             stdout_path,
             stderr_path,
-        } = self.launcher.launch(self.request_for(job, port_range));
+        } = started.launched;
         let status = JobWatch::new(Arc::clone(&self.clock))
             .status_of(process)
             .await;
 
         JobOutcome {
-            job_name: job.name.clone(),
+            job_name: started.job_name,
             status,
-            duration: self.clock.now().saturating_sub(started),
+            duration: self.clock.now().saturating_sub(started.started_at),
             stdout_path,
             stderr_path,
+        }
+    }
+
+    pub async fn run(&self, job: &Job, port_range: &PortRange) -> JobOutcome {
+        self.finish(self.start(job, port_range)).await
+    }
+
+    // Starts the job's process there and then. Waiting for it is `finish`'s,
+    // so whoever starts jobs decides the order they start in.
+    pub fn start(&self, job: &Job, port_range: &PortRange) -> StartedJob {
+        let started_at = self.clock.now();
+        StartedJob {
+            job_name: job.name.clone(),
+            launched: self.launcher.launch(self.request_for(job, port_range)),
+            started_at,
         }
     }
 

@@ -41,10 +41,11 @@ core:  GateRunner::run(config) -> GateVerdict
               shuffled only when --random, always from a seed it prints
          5. print the plan
          6. JobExecutor::execute(jobs, print each outcome as it completes)
-              per job, on its own tokio task (cli's Executor):
-                SlotPool::acquire        -> SlotGuard (waits for a free slot)
+              JobScheduler, per job in the order handed over:
+                Slots::acquire_slot      -> HeldSlot (waits for a free slot)
                 PortRangeAllocator       -> PortRange for that slot index
-                JobRunner::run           -> JobOutcome
+                JobRunner::start         -> StartedJob (the process starts)
+                TaskSpawner::spawn       -> a task: JobRunner::finish -> JobOutcome
          7. RunSummary::from_outcomes(&outcomes); print it; its verdict
 cli:   EntryPoint::exit_code(verdict) -> ExitCode
 ```
@@ -66,7 +67,9 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 | `Console` | where each line goes, stdout or stderr, as it happens | `StdConsole` |
 | `SeedSource` | a seed nobody chose | `WallClockSeed` |
 | `JobClock` | a reading, and a deadline | `TokioJobClock` |
-| `JobExecutor` | every job run, as many at once as there are slots | `Executor` |
+| `JobExecutor` | every job run, as many at once as there are slots | core's `JobScheduler`, which cli's `Executor` puts on Tokio |
+| `Slots`, `HeldSlot` | a slot, waited for until one is free, held until dropped | `SlotPool`, `SlotGuard` |
+| `TaskSpawner` | a job's task run beside the others | `TokioTaskSpawner` |
 | `JobLauncher` | a job's process, started | `ProcessJobLauncher` |
 | `RunningJob` | that process: waited on, killed, its stdout read | `ChildProcess` |
 
@@ -87,14 +90,16 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 | `TestNameReader` | core `config/test_name_reader.rs` | the test names one file declares |
 | `JobListBuilder` | core `config/job_list_builder.rs` | expands the names into `Job`s, substituting `{job}` |
 | `JobOrder` | core `execution/job_order.rs` | the order jobs reach the pool; shuffles when `--random`, from a printed seed |
-| `JobRunner` | core `execution/job_runner.rs` | what a job is handed — its port range, its name, its log directory's name — and its outcome |
+| `JobScheduler` | core `execution/job_scheduler.rs` | takes the slots one job at a time in the order handed over, starts each job there, hands only the waiting to a task |
+| `JobRunner` | core `execution/job_runner.rs` | what a job is handed — its port range, its name, its log directory's name — its start, and its outcome |
 | `JobWatch` | core `execution/job_watch.rs` | a running job's ending: exited, or timed out and killed; "running 0 tests" is a failure |
 | `PortRangeAllocator` | core `ports/port_range_allocator.rs` | slot index → `PortRange` |
 | `PortRange` | core `ports/port_range.rs` | a `base`/`count` window, with a saturating `end()` |
 | `FilesystemSafeName` | core `execution/filesystem_safe_name.rs` | maps a job name to a directory name |
 | `OutcomeLine` | core `execution/outcome_line.rs` | renders one completed job |
 | `RunSummary` | core `execution/run_summary.rs` | tallies outcomes, decides success and the verdict |
-| `Executor` | cli `execution/executor.rs` | spawns a task per job, bounded by the slot pool |
+| `Executor` | cli `execution/executor.rs` | core's scheduler on Tokio: the slot pool and Tokio's tasks |
+| `TokioTaskSpawner` | cli `execution/tokio_task_spawner.rs` | a job's task on Tokio's runtime |
 | `SlotPool` | cli `execution/slot_pool.rs` | semaphore plus free-slot queue |
 | `SlotGuard` | cli `execution/slot_guard.rs` | holds a slot for a job's lifetime, releases it on drop |
 | `ProcessJobLauncher` | cli `system/process_job_launcher.rs` | the job's log directory and files, its environment, its process |
@@ -115,13 +120,18 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 
 ## Concurrency
 
-The concurrency is cli's; core decides what each job is, not when it runs.
+Core decides the order; cli supplies the semaphore and the tasks.
 
-`Executor::run_all` spawns a tokio task for **every** job immediately, then
-awaits their handles in order. The tasks do not queue in the executor — they all
-start and then block inside `SlotPool::acquire`, and it is the semaphore that
-bounds how many are actually running. Task count therefore scales with the job
-list; running processes scale with `--max-parallel`.
+`JobScheduler::run_all` walks the jobs in the order handed over. For each it
+waits for a slot -- a permit of the semaphore of `--max-parallel` permits --,
+starts the job's process in that slot's port range, and only then spawns a task
+that waits for the process to end and gives the slot back. So the jobs start in
+the order handed over, whatever order the runtime runs their tasks in: at one
+slot each starts once the one before has finished, and above one each waits for
+a slot in turn, so only how much they overlap varies. With `--random` that
+order is the seeded one, and the same seed starts the jobs in the same order
+every run. A task is spawned only once its job holds a slot, so live tasks are
+bounded by `--max-parallel`, not by the length of the job list.
 
 Two orderings coexist deliberately:
 
@@ -131,15 +141,13 @@ Two orderings coexist deliberately:
   order jobs were given, so `Vec<JobOutcome>` and the final summary are stable
   regardless of who finished first
 
-Which task reaches the pool first is the runtime's choice, so jobs start in an
-order of their own even at `--max-parallel 1` — see `OPEN_POINTS.md`.
-
-The pool is shared across tasks as `Arc<SlotPool>`; the allocator and job runner
-are `Arc` too, both being stateless with respect to the job.
+Each task owns its slot -- the guard holds an owned permit -- and gives it back
+when it ends; the job runner is shared across tasks as an `Arc`, being stateless
+with respect to the job.
 
 ## Process handling
 
-`JobRunner::run` asks the launcher for the job: its program and arguments, the
+`JobRunner::start` asks the launcher for the job: its program and arguments, the
 slot's port range under the configured variable names, its name unsanitised as
 `SLOTGATE_JOB_NAME`, and a log directory named by
 `FilesystemSafeName::sanitize`. `ProcessJobLauncher` creates that directory
@@ -148,8 +156,8 @@ directory as `SLOTGATE_JOB_LOG_DIR`, and hands the two files directly to the
 child as its stdio — output streams to disk rather than being buffered in
 memory.
 
-`JobWatch` then races the child's wait against the clock's deadline, the wait
-polled first. Four outcomes:
+`JobRunner::finish`, in the job's task, has `JobWatch` race the child's wait
+against the clock's deadline, the wait polled first. Four outcomes:
 
 | Result | Status |
 |---|---|

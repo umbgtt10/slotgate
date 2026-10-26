@@ -135,6 +135,32 @@ were compared against the commit before the split after every step, and match.
   likewise, and a `PortRange` is built by `PortRange::new(base, count)` rather
   than by literal.
 
+### Fixed
+- **`--seed` now replays the order the jobs start in**, not only the order they
+  are handed to the slot pool. Every job was spawned as a Tokio task at once,
+  and each task took its slot itself: on the multi-thread runtime the order the
+  tasks first reached the semaphore was the scheduler's, so the same seed
+  started the jobs in a different order from run to run -- even at
+  `--max-parallel 1`, where three runs of one seed gave three orders. The
+  slots are now taken one job at a time, in the order handed over, and each
+  job's process is started as soon as it holds one; only waiting for it is
+  handed to a task. At `--max-parallel 1` the run order is the seeded
+  permutation exactly; above it each job waits for a slot in turn, so only how
+  much the jobs overlap varies. The permutation a seed gives is unchanged. A
+  task is now spawned only once its job holds a slot, so live tasks no longer
+  scale with the length of the job list.
+
+  In the library: a new `execution::job_scheduler::JobScheduler` holds that
+  order and implements `JobExecutor`, over two new ports -- `traits::slots::
+  Slots`, which hands out a `traits::held_slot::HeldSlot`, and
+  `traits::task_spawner::TaskSpawner`. `JobRunner` gains `start`, which starts
+  a job's process and returns an `execution::started_job::StartedJob`, and
+  `finish`, which waits for it; `run` is both. In `slotgate_cli`, `Executor`
+  is the scheduler on Tokio, `SlotPool` implements `Slots`, `SlotGuard` owns its
+  permit (`SlotGuard::take` takes the free list as an `Arc` and an
+  `OwnedSemaphorePermit`) and implements `HeldSlot`, and `TokioTaskSpawner` is
+  new.
+
 ## [0.6.1] - 2026-10-10
 
 How the gates are run, again; nothing about the runner. Same CLI, same output,

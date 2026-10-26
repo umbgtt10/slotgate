@@ -8,16 +8,25 @@
 // command line's (`cli/tests/invocation/entry_point_tests.rs`).
 
 use crate::support::blocking::Blocking;
+use crate::support::fake_job_clock::FakeJobClock;
 use crate::support::fake_seed_source::FakeSeedSource;
+use crate::support::fake_slots::FakeSlots;
 use crate::support::in_memory_source_tree::InMemorySourceTree;
 use crate::support::recording_console::RecordingConsole;
+use crate::support::reversing_task_spawner::ReversingTaskSpawner;
 use crate::support::scripted_job_executor::ScriptedJobExecutor;
+use crate::support::scripted_job_launcher::ScriptedJobLauncher;
 use crate::support::scripted_pre_build::ScriptedPreBuild;
 use slotgate::config::config_failure::ConfigFailure;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::execution::gate_runner::GateRunner;
 use slotgate::execution::gate_verdict::GateVerdict;
+use slotgate::execution::job::Job;
+use slotgate::execution::job_order::JobOrder;
+use slotgate::execution::job_runner::JobRunner;
+use slotgate::execution::job_scheduler::JobScheduler;
 use slotgate::execution::job_status::JobStatus;
+use slotgate::ports::port_range_allocator::PortRangeAllocator;
 use std::sync::Arc;
 
 fn args_running(jobs: &[&str]) -> GateConfig {
@@ -189,4 +198,61 @@ fn run_of_a_gate_with_random_hands_the_executor_the_seeded_order() {
         console.lines()[0],
         "stdout: SLOTGATE — RANDOM ORDER, seed 7 (replay with --seed 7)"
     );
+}
+
+// A seeded run starts its jobs in the seeded order -- not merely hands them
+// over in it -- even when the runtime runs their tasks last first.
+#[test]
+fn run_of_a_gate_with_random_starts_the_jobs_in_the_seeded_order() {
+    // Arrange
+    let names = ["a", "b", "c", "d", "e", "f", "g", "h"];
+    let launcher = Arc::new(ScriptedJobLauncher::new(Some(true), None));
+    let scheduler = JobScheduler::new(
+        Arc::new(FakeSlots::new(names.len())),
+        Arc::new(ReversingTaskSpawner::new()),
+        PortRangeAllocator::new(30_000, 100),
+        JobRunner::new(
+            String::from("PORT_RANGE_BASE"),
+            String::from("PORT_RANGE_COUNT"),
+            launcher.clone(),
+            Arc::new(FakeJobClock::new(&[], false)),
+        ),
+    );
+    let gate = GateRunner::new(
+        Arc::new(ScriptedPreBuild::new(Ok(None))),
+        Arc::new(InMemorySourceTree::new()),
+        Arc::new(FakeSeedSource::new(4242)),
+        Arc::new(scheduler),
+        Arc::new(RecordingConsole::new()),
+    );
+    let args = GateConfig {
+        random: true,
+        seed: Some(7),
+        ..args_running(&names)
+    };
+    let seeded: Vec<String> = JobOrder::shuffle(
+        names
+            .iter()
+            .map(|name| Job {
+                name: String::from(*name),
+                program: String::from("cargo"),
+                args: Vec::new(),
+            })
+            .collect(),
+        7,
+    )
+    .into_iter()
+    .map(|job| job.name)
+    .collect();
+
+    // Act
+    Blocking::on(gate.run(args));
+
+    // Assert
+    let started: Vec<String> = launcher
+        .requests()
+        .iter()
+        .map(|request| request.directory.clone())
+        .collect();
+    assert_eq!(started, seeded);
 }

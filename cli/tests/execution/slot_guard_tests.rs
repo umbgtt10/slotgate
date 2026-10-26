@@ -5,6 +5,7 @@
 use slotgate_cli::execution::slot_guard::SlotGuard;
 use slotgate_cli::execution::slot_pool::SlotPool;
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::Semaphore;
@@ -40,10 +41,12 @@ async fn a_held_guard_keeps_its_slot_out_of_circulation() {
 #[tokio::test]
 async fn drop_of_a_taken_guard_puts_its_slot_back_on_the_free_list() {
     // Arrange
-    let free_slots = Mutex::new(VecDeque::from([3, 5]));
-    let semaphore = Semaphore::new(1);
-    let permit = semaphore.acquire().await.expect("an open semaphore");
-    let guard = SlotGuard::take(&free_slots, permit);
+    let free_slots = Arc::new(Mutex::new(VecDeque::from([3, 5])));
+    let permit = Arc::new(Semaphore::new(1))
+        .acquire_owned()
+        .await
+        .expect("an open semaphore");
+    let guard = SlotGuard::take(Arc::clone(&free_slots), permit);
 
     // Act
     drop(guard);
@@ -123,12 +126,14 @@ async fn slot_index_reports_the_same_slot_on_every_call() {
 #[tokio::test]
 async fn take_claims_the_first_free_slot() {
     // Arrange
-    let free_slots = Mutex::new(VecDeque::from([3, 5]));
-    let semaphore = Semaphore::new(1);
-    let permit = semaphore.acquire().await.expect("an open semaphore");
+    let free_slots = Arc::new(Mutex::new(VecDeque::from([3, 5])));
+    let permit = Arc::new(Semaphore::new(1))
+        .acquire_owned()
+        .await
+        .expect("an open semaphore");
 
     // Act
-    let guard = SlotGuard::take(&free_slots, permit);
+    let guard = SlotGuard::take(Arc::clone(&free_slots), permit);
 
     // Assert
     assert_eq!(guard.slot_index(), 3);

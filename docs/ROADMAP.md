@@ -108,8 +108,6 @@ Goal: spend the available slots better.
 Planned scope:
 
 - longest-first ordering from a previous run's recorded durations
-- bounded task spawning, so a very large job list does not create a task per
-  job up front
 - optional retry of a failed or timed-out job in a fresh slot
 - per-job overrides of the global timeout
 

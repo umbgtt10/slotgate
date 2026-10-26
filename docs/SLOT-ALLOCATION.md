@@ -58,8 +58,11 @@ arithmetic above.
 - a `tokio::sync::Semaphore` with `max_parallel` permits, which bounds concurrency
 - a `Mutex<VecDeque<usize>>` of free slot indices, which decides *which* slot
 
-`acquire()` waits for a permit, then pops a slot index from the front of the
-queue. The permit and the index travel together inside a `SlotGuard`.
+The slots are taken one job at a time, in the order the jobs are handed over
+-- core's `JobScheduler` asks for the next slot only once the job before has
+one and its process has started -- so the jobs start in that order, whatever
+order the runtime runs their tasks in. `acquire()` waits for a permit, then pops
+a slot index from the front of the queue. The permit and the index travel together inside a `SlotGuard`.
 
 `SlotGuard` releases on `Drop`: it pushes **its own** index back to the queue,
 and the permit it holds is released by the same drop. Both happen together, so
