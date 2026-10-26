@@ -4,6 +4,18 @@ This document describes the feature set currently shipped by `slotgate`. For
 the mechanism behind it see [SLOT-ALLOCATION.md](SLOT-ALLOCATION.md); for
 released versions see [CHANGELOG.md](../CHANGELOG.md).
 
+## Unreleased
+
+### Packaging
+
+- Two published crates: `slotgate` (`cli/`), the command line, and
+  `slotgate-core` (`core/`), the `slotgate` library -- `no_std` and depending on
+  no crate: every decision a run makes, with the processes, the clock, the disk
+  and the console behind traits the command line implements
+- Stage 2 opens with a technology-free core gate, and `.cargo/mutants.toml`
+  scopes mutation testing to the core
+- The command line, its output, the job logs and the exit codes are unchanged
+
 ## Version 0.6.1
 
 ### Quality gates

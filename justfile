@@ -27,7 +27,7 @@ stage1:
     cargo clippy --workspace --all-targets -- -D warnings
     cargo test --workspace
 
-# House rules, duplication, CRAP, mirrored tests and file risk, run in that
-# order by `cargo xtask stage2`.
+# The technology-free core, house rules, unused dependencies, duplication,
+# CRAP, mirrored tests and file risk, run in that order by `cargo xtask stage2`.
 stage2:
     cargo xtask stage2

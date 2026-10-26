@@ -50,10 +50,11 @@ recompile.
 
 ## Consequences
 
-There is cargo-specific knowledge in the codebase: `CompilerArtifactParser`
-understands `reason`, `profile.test` and `target.name`, and `GateRunner` knows
-the three libtest arguments to substitute. Both are confined to that one
-optional path — nothing on the default path mentions cargo.
+There is cargo-specific knowledge in the codebase: `CompilerArtifactParser`, in
+the `slotgate` crate beside the pre-build's process, understands `reason`,
+`profile.test` and `target.name`, and the core's `PreBuildResolver` knows the
+three libtest arguments to substitute. Both are confined to that one optional
+path — nothing on the default path mentions cargo.
 
 `--program` remains required by the CLI even when discovery will override it,
 so a caller using discovery must pass a placeholder. That is a wart, recorded
@@ -64,10 +65,10 @@ produces them, so the final one is the completed target.
 
 ## Enforcement
 
-`tests/config/compiler_artifact_parser_tests.rs` pins the filtering rules and
-the last-match behaviour. `tests/execution/gate_runner_tests.rs` asserts that
-with no `--pre-build-program` the arguments pass through untouched, so the
-default path cannot start rewriting the caller's command.
+`cli/tests/system/compiler_artifact_parser_tests.rs` pins the filtering rules
+and the last-match behaviour. `core/tests/config/pre_build_resolver_tests.rs`
+asserts that with no `--pre-build-program` the arguments pass through
+untouched, so the default path cannot start rewriting the caller's command.
 
 ## Related
 

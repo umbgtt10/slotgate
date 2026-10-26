@@ -13,9 +13,9 @@ three types take time through ports their constructors are handed, and two keep
 their fields private.
 
 The repository then splits into a technology-free core and a cli crate
-(`docs/CORE_CLI_SPLIT.md`), which changes how the library is packaged and much
-of its API. Its stdout, stderr, job logs and exit codes are compared against
-the commit before the split after every step.
+(`docs/history/[IMPLEMENTED] CORE_CLI_SPLIT.md`), which changes how the library
+is packaged and much of its API. Its stdout, stderr, job logs and exit codes
+were compared against the commit before the split after every step, and match.
 
 ### Changed (packages)
 - `slotgate` is now the command-line crate (`cli/`): the `slotgate` binary and

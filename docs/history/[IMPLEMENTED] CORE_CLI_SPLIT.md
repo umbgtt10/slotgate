@@ -1,8 +1,42 @@
-# A technology-free core and a cli crate
+# [IMPLEMENTED] A technology-free core and a cli crate
 
-Status: **in progress** -- one commit per slice, in the order below.
+Status: **implemented**, 2026-10-26, in eleven signed commits on `main`; the
+record below is the plan as it landed, row by row.
 
-## Why
+| slice | commit |
+|---|---|
+| S0 the record | `e1a3289` |
+| S1 one dry4rust run, exclusions by path | `1a51258` |
+| S2 the split | `4a9a513` |
+| S3 `SourceTree` | `04ebcab` |
+| S4 `PreBuild` | `c3690df` |
+| S5 `Console` and `GateVerdict` | `c60cd8f` |
+| S6 the runtime leaves core | `c03cd21` |
+| S7 `#![no_std]` | `eee4af5` |
+| S8 the technology-free gate | `34b891a` |
+| S9 `.cargo/mutants.toml` | `ea09344` |
+| S10 docs, and this move | the commit that added this file |
+
+Two things went otherwise than planned. When `GateRunner::run`'s two tests
+moved to cli in S2, the core kept a caller of its own: a run with no job list,
+the one run that starts no process, under the name it has at the end; its
+assertions grew as the slices gave them something to see -- the exit code, then
+the line on stderr and the verdict, then the empty executor. And
+`GateRunner`'s private `resolve` waited for S6: beside S2-S5's `executor_for`
+it put `gate_runner.rs` over iceberg4rust's 1.8 ceiling.
+
+The result: core 121 tests, cli 66, xtask 127 (241 before: core 143, xtask
+98); `cargo mutants --list` 116, all in `slotgate-core` (262 before); a clean
+build of core's tests 2.7 s where it was 20.2 s, a mutant's build and test run
+0.46 s where it was 1.19 s, medians of three under load.
+
+---
+
+## A technology-free core and a cli crate
+
+Status: **implemented** -- one commit per slice, in the order below.
+
+### Why
 
 Mutation testing pays for every mutant with a build and a test run. A mutant in
 code that starts processes, waits on Tokio's timers or writes log files is slow
@@ -22,7 +56,7 @@ alone. What cannot move without becoming a fake is the concurrency itself --
 a task per job, the semaphore and the free-slot queue -- and the processes, the
 timer and the files: they stay in cli, tested there.
 
-## The shape
+### The shape
 
 The workspace grows a third member:
 
@@ -35,7 +69,7 @@ The workspace grows a third member:
 `cli` depends on `core`, never the reverse. Both published crates share one
 workspace version.
 
-### Ports
+#### Ports
 
 Core declares a trait for everything technological it needs, implemented in
 cli and, for core's own tests, by fakes under `core/tests/support/`:
@@ -60,7 +94,7 @@ The binary's behaviour does not change: stdout, stderr, the job logs and exit
 codes are compared against a build of the commit before the split after every
 slice that touches them.
 
-### The gate
+#### The gate
 
 A stage-2 gate, first in the run, keeps core technology-free: its manifest may
 name no crate in any section, its crate root must carry `#![no_std]` and
@@ -68,12 +102,12 @@ name no crate in any section, its crate root must carry `#![no_std]` and
 reach `std::{env,fs,io,net,os,process,thread}`, the printing macros, the
 file-system methods or `extern crate std`.
 
-### Mutation testing
+#### Mutation testing
 
 `.cargo/mutants.toml` scopes cargo-mutants to `core/src`; each mutant runs
 core's tests only.
 
-## Slices
+### Slices
 
 | # | slice | status |
 |---|---|---|
@@ -87,9 +121,9 @@ core's tests only.
 | S7 | `#![no_std]` | done |
 | S8 | the technology-free gate, first in stage 2 | done |
 | S9 | `.cargo/mutants.toml` | done |
-| S10 | docs, and this record moves to `docs/history/` | |
+| S10 | docs, and this record moves to `docs/history/` | done |
 
-## Tests that move
+### Tests that move
 
 No test is deleted. Tests whose subject moves go with it:
 

@@ -74,9 +74,9 @@ Goal: a failure inside `slotgate` is reported as a failure, not a panic.
 
 Planned scope:
 
-- replace the filesystem `expect` calls in `JobRunner` with a `JobStatus`
-  outcome, so an unwritable log directory fails that job rather than aborting
-  the run
+- replace the filesystem `expect` calls in `ProcessJobLauncher` with a
+  `JobStatus` outcome, so an unwritable log directory fails that job rather
+  than aborting the run
 - surface a panicking job task as a failed job with its own diagnostic
 - a non-zero exit distinct from job failure when the runner itself could not
   do its work

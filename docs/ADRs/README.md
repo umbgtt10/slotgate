@@ -2,8 +2,8 @@
 
 Each ADR documents one load-bearing decision behind `slotgate` — succinct,
 self-contained, citable on its own. Like the sibling `crap4rust` and
-`twin4rust` tools, these are not priority-tiered: a single-crate CLI has a
-small enough decision surface that a flat list is sufficient.
+`twin4rust` tools, these are not priority-tiered: a small CLI has a small
+enough decision surface that a flat list is sufficient.
 
 ## Index
 
@@ -13,6 +13,7 @@ small enough decision surface that a flat list is sufficient.
 | [ADR-PreBuildDiscoveryIsTheOneCargoConcession](ADR-PreBuildDiscoveryIsTheOneCargoConcession.md) | `slotgate` is domain-agnostic everywhere except one optional path: it can read cargo's JSON output to find a test binary, because building inside each job contends and on Windows fails outright. |
 | [ADR-JobsOwnTheirLogDirectory](ADR-JobsOwnTheirLogDirectory.md) | Each job is told its own log directory and unsanitised name through the environment, rather than being left to reconstruct the path from its name. |
 | [ADR-EntryPointIsAShim](ADR-EntryPointIsAShim.md) | `main` parses arguments and delegates; all orchestration lives in the library, because a binary entry point cannot be reached from an integration test. |
+| [ADR-TechnologyFreeCore](ADR-TechnologyFreeCore.md) | Every decision lives in `slotgate-core`, `no_std` and depending on nothing, with technology behind traits that the `slotgate` crate implements, so mutation testing needs nothing but the core's own tests. |
 
 ## Template
 

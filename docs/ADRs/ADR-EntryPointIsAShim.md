@@ -15,8 +15,9 @@ whether the whole run reports success — was unreachable from `tests/`.
 
 ## Decision
 
-`main` parses `GateArgs` and calls `GateRunner::run`. All orchestration lives in
-the library.
+`main` parses `GateArgs` and calls `EntryPoint::run`, the composition root in
+the `slotgate` crate, which only composes the real parts and turns the verdict
+into an exit code. All orchestration lives in `slotgate-core`'s `GateRunner`.
 
 ## Forcing constraints / Evidence
 
@@ -46,17 +47,19 @@ point. `slotgate` was the outlier.
 
 ## Consequences
 
-Two new library types, `GateRunner` and `RunSummary`, each with a mirrored test
-file. `RunSummary` is now directly testable and is: its tests pin the counting,
-the empty-run case, and that a timeout is not success.
+`GateRunner` and `RunSummary` are library types, each with a mirrored test file.
+`RunSummary` is directly testable and is: its tests pin the counting, the
+empty-run case, and that a timeout is not success. `GateRunner`'s tests drive a
+whole run on fakes -- every printed line, the jobs handed to the executor, the
+verdict -- and `EntryPoint`'s tests drive the composed binary against real
+processes.
 
-`GateRunner::resolve_pre_build` is `pub` so the pass-through path can be tested
-without spawning a process. That is a slightly wider public surface than the
-type strictly needs, accepted in exchange for the coverage.
+The pass-through path of the pre-build is `PreBuildResolver`'s, and is tested
+without spawning a process.
 
-The library now exposes orchestration that no external consumer is expected to
-call. `slotgate` is published as a binary, so the library surface is
-incidental rather than a supported API.
+The library exposes orchestration that no external consumer is expected to
+call. The `slotgate` crate is published as a binary and `slotgate-core` holds
+the library, whose surface is incidental rather than a supported API.
 
 ## Enforcement
 
@@ -69,3 +72,4 @@ mirrored test file.
 
 - `docs/ARCHITECTURE.md`
 - [ADR-SlotsOwnPortRangesNotJobs](ADR-SlotsOwnPortRangesNotJobs.md)
+- [ADR-TechnologyFreeCore](ADR-TechnologyFreeCore.md)

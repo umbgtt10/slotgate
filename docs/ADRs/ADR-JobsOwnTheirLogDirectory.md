@@ -54,8 +54,11 @@ not the directory-safe rendering of it.
 
 ## Enforcement
 
-`tests/execution/job_runner_filesystem_safety_tests.rs` covers the sanitising
-path, and `tests/execution/filesystem_safe_name_tests.rs` pins the character
+`cli/tests/system/process_job_launcher_tests.rs` runs real children that read
+both variables back, a `::` name among them;
+`core/tests/execution/job_runner_tests.rs` pins the directory name and the
+unsanitised name a job is handed; and
+`core/tests/execution/filesystem_safe_name_tests.rs` pins the character
 mapping.
 
 ## Related

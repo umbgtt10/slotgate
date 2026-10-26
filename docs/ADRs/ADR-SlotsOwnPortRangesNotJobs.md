@@ -60,10 +60,11 @@ about when choosing a base port.
 
 ## Enforcement
 
-`tests/ports/port_range_allocator_tests.rs` asserts that consecutive slot ranges
-never overlap and that ranges across a full `max_parallel` span are pairwise
-disjoint. `tests/execution/slot_guard_tests.rs` asserts a released guard returns
-*its own* index — not merely some index — which is what makes slot reuse sound.
+`core/tests/ports/port_range_allocator_tests.rs` asserts that consecutive slot
+ranges never overlap and that ranges across a full `max_parallel` span are
+pairwise disjoint. `cli/tests/execution/slot_guard_tests.rs` asserts a released
+guard returns *its own* index — not merely some index — which is what makes
+slot reuse sound.
 
 ## Related
 

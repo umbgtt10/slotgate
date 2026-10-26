@@ -36,15 +36,20 @@ just stage2
 Both must be green before a change is complete, and both run the same way on
 Windows, Linux and macOS. Stage 1 is formatting, clippy and tests — cargo
 built-ins only, so it works on a fresh checkout with none of the tools below
-installed. Stage 2 is `cargo xtask stage2`, which runs, in order:
-`cargo stern4rust` (house coding rules), `cargo shear` (every declared
-dependency used), `cargo dry4rust` (no duplication
-beyond `dry4rust-baseline.json`), `cargo crap4rust` (complexity against
-coverage), `cargo twin4rust` (every source file has a mirrored test file) and
-`cargo iceberg4rust` (file risk).
+installed. Stage 2 is `cargo xtask stage2`, which runs, in order: a check of
+its own that the core stays technology-free, `cargo stern4rust` (house coding
+rules), `cargo shear` (every declared dependency used), `cargo dry4rust` (no
+duplication beyond `dry4rust-baseline.json`), `cargo crap4rust` (complexity
+against coverage), `cargo twin4rust` (every source file has a mirrored test
+file) and `cargo iceberg4rust` (file risk).
 
-The repository is a workspace: `core/` is the published crate, `xtask/` runs the
-gates, and `xtask` is held to the house rules alongside `core`.
+The repository is a workspace of three members. `core/` is `slotgate-core`, the
+`slotgate` library: every decision a run makes, `no_std` and depending on no
+crate, with the processes, the clock, the disk and the console behind traits.
+`cli/` is `slotgate`, the binary: the argument parsing, the runtime and the
+adapters that implement those traits. `xtask/` runs the gates and is held to
+the house rules alongside the other two. Mutation testing is scoped to the core
+(`.cargo/mutants.toml`).
 
 Everything the two stages need, none of which ships with cargo:
 

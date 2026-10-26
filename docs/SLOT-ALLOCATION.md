@@ -48,6 +48,11 @@ finished — see below.
 
 ## How a slot is held and released
 
+The pool and its guard are the `slotgate` crate's (`cli/src/execution/`): a
+Tokio semaphore and a lock are runtime, and stay out of the technology-free
+core, whose `PortRangeAllocator` and `PortRange` (`core/src/ports/`) are the
+arithmetic above.
+
 `SlotPool` holds two things:
 
 - a `tokio::sync::Semaphore` with `max_parallel` permits, which bounds concurrency
