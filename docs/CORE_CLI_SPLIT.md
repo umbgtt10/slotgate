@@ -79,7 +79,7 @@ core's tests only.
 |---|---|---|
 | S0 | this record | done |
 | S1 | `DryGate`: one run over the workspace, with the trees it must not judge excluded by full path | done |
-| S2 | the split: `cli` takes `main.rs`, `GateArgs` and a new `EntryPoint`; core is renamed and reads a `GateConfig` record; `[workspace.lints]` forbids unsafe code; clap leaves core | |
+| S2 | the split: `cli` takes `main.rs`, `GateArgs` and a new `EntryPoint`; core is renamed and reads a `GateConfig` record; `[workspace.lints]` forbids unsafe code; clap leaves core | done |
 | S3 | the `SourceTree` port; `JobSource` and `TestPathScanner` read through it, `ModulePath` reads paths as text; the file finder becomes cli's | |
 | S4 | the `PreBuild` port; the pre-build runner and cargo's JSON go to cli; serde_json leaves core | |
 | S5 | the `Console` port and `GateVerdict`: every line through the port, the exit code in `EntryPoint` | |

@@ -7,19 +7,18 @@
 // These moved here with `resolve` when it left `GateRunner`. The assertions are
 // the ones written against it there, re-pointed rather than rewritten.
 
-use slotgate::config::gate_args::GateArgs;
+use slotgate::config::gate_config::GateConfig;
 use slotgate::config::pre_build_resolver::PreBuildResolver;
-use std::path::PathBuf;
 
-fn args_without_pre_build() -> GateArgs {
-    GateArgs {
+fn args_without_pre_build() -> GateConfig {
+    GateConfig {
         max_parallel: 2,
         port_range_base: 31000,
         port_range_size: 50,
         port_env_base: String::from("PORT_RANGE_BASE"),
         port_env_count: String::from("PORT_RANGE_COUNT"),
         timeout_secs: 7,
-        log_dir: PathBuf::from("logs/probe"),
+        log_dir: String::from("logs/probe"),
         program: String::from("cargo"),
         program_args: vec![String::from("test"), String::from("{job}")],
         jobs: vec![String::from("alpha"), String::from("beta")],
@@ -32,7 +31,7 @@ async fn resolve_pre_build_reports_an_error_when_the_pre_build_program_cannot_ru
     // Arrange -- a pre-build step that cannot even start must abort the run.
     // Falling through to the jobs would execute them against a binary the
     // build never produced.
-    let args = GateArgs {
+    let args = GateConfig {
         pre_build_program: Some(String::from(
             "slotgate-nonexistent-pre-build-program-for-tests",
         )),

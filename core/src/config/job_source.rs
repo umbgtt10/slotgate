@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 use crate::config::config_failure::ConfigFailure;
-use crate::config::gate_args::GateArgs;
+use crate::config::gate_config::GateConfig;
 use crate::config::test_path_scanner::TestPathScanner;
 use std::fs::read_to_string;
+use std::path::PathBuf;
 
 // Where the job names come from: the command line, or a file naming one per
 // line.
@@ -29,12 +30,12 @@ impl JobSource {
     // stated. Returned whole rather than as a bare list so the caller keeps the
     // shape it already has for the pre-build step, and so nothing downstream
     // has to know there was ever more than one way to name a job.
-    pub fn apply(args: GateArgs) -> Result<GateArgs, ConfigFailure> {
+    pub fn apply(args: GateConfig) -> Result<GateConfig, ConfigFailure> {
         let jobs = Self::resolve(&args)?;
-        Ok(GateArgs { jobs, ..args })
+        Ok(GateConfig { jobs, ..args })
     }
 
-    pub fn resolve(args: &GateArgs) -> Result<Vec<String>, ConfigFailure> {
+    pub fn resolve(args: &GateConfig) -> Result<Vec<String>, ConfigFailure> {
         let stated: Vec<&str> = [
             (!args.jobs.is_empty()).then_some("--jobs"),
             (!args.jobs_paths.is_empty()).then_some("--jobs-path"),
@@ -46,20 +47,19 @@ impl JobSource {
 
         match stated.as_slice() {
             ["--jobs"] => Ok(args.jobs.clone()),
-            ["--jobs-path"] => TestPathScanner::scan(&args.jobs_paths),
-            ["--jobs-file"] => Self::read(&Self::file_path_of(args)),
+            ["--jobs-path"] => TestPathScanner::scan(
+                &args
+                    .jobs_paths
+                    .iter()
+                    .map(PathBuf::from)
+                    .collect::<Vec<_>>(),
+            ),
+            ["--jobs-file"] => Self::read(&args.jobs_file.clone().unwrap_or_default()),
             [] => Err(ConfigFailure::NoJobs),
             several => Err(ConfigFailure::SeveralJobLists(
                 several.iter().map(|stated| (*stated).to_string()).collect(),
             )),
         }
-    }
-
-    fn file_path_of(args: &GateArgs) -> String {
-        args.jobs_file
-            .as_ref()
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default()
     }
 
     // Blank lines are dropped and each name is trimmed. A job name never has

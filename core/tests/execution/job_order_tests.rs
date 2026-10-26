@@ -9,22 +9,21 @@
 // re-run, which is worse than not shuffling at all.
 
 use crate::time::seed_source_tests::FakeSeedSource;
-use slotgate::config::gate_args::GateArgs;
+use slotgate::config::gate_config::GateConfig;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_order::JobOrder;
 use slotgate::time::wall_clock_seed::WallClockSeed;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-fn args_with(random: bool, seed: Option<u64>) -> GateArgs {
-    GateArgs {
+fn args_with(random: bool, seed: Option<u64>) -> GateConfig {
+    GateConfig {
         max_parallel: 1,
         port_range_base: 30000,
         port_range_size: 100,
         port_env_base: String::from("PORT_RANGE_BASE"),
         port_env_count: String::from("PORT_RANGE_COUNT"),
         timeout_secs: 120,
-        log_dir: PathBuf::from("logs"),
+        log_dir: String::from("logs"),
         program: String::from("cargo"),
         random,
         seed,

@@ -17,11 +17,12 @@ use xtask::gates::stern_gate::SternGate;
 use xtask::gates::twin_gate::TwinGate;
 use xtask::process::system_command_runner::SystemCommandRunner;
 
-const CORE_PACKAGE: &str = "slotgate";
+const CLI_PACKAGE: &str = "slotgate";
+const CORE_PACKAGE: &str = "slotgate-core";
 const XTASK_PACKAGE: &str = "xtask";
 const CRAP_THRESHOLD: &str = "15";
 const ICEBERG_THRESHOLD: &str = "1.8";
-const DRY_EXCLUDES: [&[&str]; 2] = [&["xtask"], &["core", "tests"]];
+const DRY_EXCLUDES: [&[&str]; 3] = [&["xtask"], &["core", "tests"], &["cli", "tests"]];
 const DRY_BASELINE: &str = "dry4rust-baseline.json";
 const DRY_MIN_NODES: &str = "25";
 
@@ -47,7 +48,11 @@ fn run_stage2() -> ExitCode {
     let stern = SternGate::new(
         &runner,
         manifest_path.clone(),
-        vec![String::from(CORE_PACKAGE), String::from(XTASK_PACKAGE)],
+        vec![
+            String::from(CORE_PACKAGE),
+            String::from(CLI_PACKAGE),
+            String::from(XTASK_PACKAGE),
+        ],
     );
 
     // Second: every declared dependency used, in the section that uses it. Its
@@ -57,8 +62,8 @@ fn run_stage2() -> ExitCode {
 
     // Third, for the same reason stern4rust is first: removing a duplicate
     // moves code between files, which changes what the three behind it measure.
-    // One run from the workspace root with the trees it must not judge left
-    // out -- tests repeat their arrangement by design, and xtask is not
+    // One run over both published crates' sources, so a copy from one into the
+    // other is seen -- tests repeat their arrangement by design, and xtask is not
     // published -- against a baseline of what was already duplicated when the
     // gate arrived, so it fails on what a change adds. The floor is the
     // family's: a baseline only matches at the floor it was recorded at.
@@ -74,22 +79,22 @@ fn run_stage2() -> ExitCode {
         String::from(DRY_MIN_NODES),
     );
 
-    // The published crate only. CRAP scores functions against their coverage,
+    // The published crates only. CRAP scores functions against their coverage,
     // and the bill being paid here is slotgate's rather than xtask's.
-    let core_only = vec![String::from(CORE_PACKAGE)];
+    let published = vec![String::from(CORE_PACKAGE), String::from(CLI_PACKAGE)];
 
     let crap = CrapGate::new(
         &runner,
         &parser,
         manifest_path.clone(),
-        core_only.clone(),
+        published.clone(),
         String::from(CRAP_THRESHOLD),
     );
-    let twin = TwinGate::new(&runner, manifest_path.clone(), core_only.clone());
+    let twin = TwinGate::new(&runner, manifest_path.clone(), published.clone());
     let iceberg = IcebergGate::new(
         &runner,
         manifest_path,
-        core_only,
+        published,
         String::from(ICEBERG_THRESHOLD),
     );
 

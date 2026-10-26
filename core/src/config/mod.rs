@@ -4,7 +4,7 @@
 
 pub mod compiler_artifact_parser;
 pub mod config_failure;
-pub mod gate_args;
+pub mod gate_config;
 pub mod job_list_builder;
 pub mod job_source;
 pub mod module_path;

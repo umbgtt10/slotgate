@@ -12,6 +12,28 @@ library is not: one `pub(crate)` method is gone, a constructor is replaced,
 three types take time through ports their constructors are handed, and two keep
 their fields private.
 
+The repository then splits into a technology-free core and a cli crate
+(`docs/CORE_CLI_SPLIT.md`), which changes how the library is packaged and much
+of its API. Its stdout, stderr, job logs and exit codes are compared against
+the commit before the split after every step.
+
+### Changed (packages)
+- `slotgate` is now the command-line crate (`cli/`): the `slotgate` binary and
+  a library, `slotgate_cli`. The library `slotgate` is published by a new
+  package, `slotgate-core` (`core/`); a dependent replaces `slotgate` with
+  `slotgate-core`, and paths under `slotgate::` stay for what remains there.
+  Both crates share the workspace's version. clap leaves the library.
+- `config::gate_args::GateArgs` moves to
+  `slotgate_cli::invocation::gate_args::GateArgs`, still the clap parser. The
+  library reads a new record, `config::gate_config::GateConfig`: the same
+  fields, its three paths as the text the caller wrote (`String`), built from
+  the parsed arguments by `GateConfig::from` -- lossily, for a path that is not
+  UTF-8. `JobSource::{apply, resolve}`, `PreBuildResolver::resolve`,
+  `JobOrder::apply`, `JobListBuilder::build` and `GateRunner::run` take a
+  `GateConfig`.
+- `main.rs` moves to cli and hands the parsed arguments to
+  `slotgate_cli::invocation::entry_point::EntryPoint`, the composition root.
+
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for
   stern4rust's coming `injected-time` rule. `JobClock` -- a reading on the

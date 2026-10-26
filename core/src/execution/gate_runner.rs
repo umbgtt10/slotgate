@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::config::gate_args::GateArgs;
+use crate::config::gate_config::GateConfig;
 use crate::config::job_list_builder::JobListBuilder;
 use crate::config::job_source::JobSource;
 use crate::config::pre_build_resolver::PreBuildResolver;
@@ -14,6 +14,7 @@ use crate::execution::run_summary::RunSummary;
 use crate::ports::port_range_allocator::PortRangeAllocator;
 use crate::time::job_clock::JobClock;
 use crate::time::seed_source::SeedSource;
+use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
@@ -27,7 +28,7 @@ impl GateRunner {
         Self { clock, seeds }
     }
 
-    pub async fn run(&self, args: GateArgs) -> ExitCode {
+    pub async fn run(&self, args: GateConfig) -> ExitCode {
         // Both steps work out the args a run should use and both fail the same
         // way, so they share one exit rather than repeating it. The pre-build
         // error is labelled where it is raised instead of where it is printed,
@@ -58,18 +59,18 @@ impl GateRunner {
         summary.exit_code()
     }
 
-    fn executor_for(&self, args: &GateArgs) -> Executor {
+    fn executor_for(&self, args: &GateConfig) -> Executor {
         let port_allocator = PortRangeAllocator::new(args.port_range_base, args.port_range_size);
         let job_runner = JobRunner::new(
             args.port_env_base.clone(),
             args.port_env_count.clone(),
-            args.log_dir.clone(),
+            PathBuf::from(&args.log_dir),
             Arc::clone(&self.clock),
         );
         Executor::new(args.max_parallel, port_allocator, job_runner)
     }
 
-    fn print_plan(args: &GateArgs, job_count: usize) {
+    fn print_plan(args: &GateConfig, job_count: usize) {
         println!(
             "SLOTGATE — {} jobs, max_parallel={}, ports {}-{} per slot",
             job_count,

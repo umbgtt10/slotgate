@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::config::config_failure::ConfigFailure;
-use crate::config::gate_args::GateArgs;
+use crate::config::gate_config::GateConfig;
 use crate::config::pre_build_runner::PreBuildRunner;
 
 const LIBTEST_ARGS_FOR_DISCOVERED_BINARY: [&str; 3] = ["{job}", "--exact", "--test-threads=1"];
@@ -26,7 +26,7 @@ pub struct PreBuildResolver;
 impl PreBuildResolver {
     /// Without a pre-build program the arguments pass through untouched.
     /// With one, a discovered test binary replaces `program`/`program_args`.
-    pub async fn resolve(args: &GateArgs) -> Result<GateArgs, ConfigFailure> {
+    pub async fn resolve(args: &GateConfig) -> Result<GateConfig, ConfigFailure> {
         let Some(pre_build_program) = &args.pre_build_program else {
             return Ok(args.clone());
         };
@@ -53,8 +53,8 @@ impl PreBuildResolver {
         Ok(Self::with_discovered_binary(args, executable))
     }
 
-    fn with_discovered_binary(args: &GateArgs, executable: String) -> GateArgs {
-        GateArgs {
+    fn with_discovered_binary(args: &GateConfig, executable: String) -> GateConfig {
+        GateConfig {
             program: executable,
             program_args: LIBTEST_ARGS_FOR_DISCOVERED_BINARY
                 .iter()

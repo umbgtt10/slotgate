@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::config::gate_args::GateArgs;
+use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
 use crate::time::seed_source::SeedSource;
 use std::sync::Arc;
@@ -39,7 +39,7 @@ impl JobOrder {
     // Shuffled only when asked, and the seed is always printed. Without
     // `--seed` one is drawn from the seed source -- the wall clock, in a real
     // run -- which is the single place this tool wants a number nobody chose.
-    pub fn apply(&self, jobs: Vec<Job>, args: &GateArgs) -> Vec<Job> {
+    pub fn apply(&self, jobs: Vec<Job>, args: &GateConfig) -> Vec<Job> {
         if !args.random {
             return jobs;
         }

@@ -4,6 +4,7 @@
 
 use clap::Parser;
 use clap::value_parser;
+use slotgate::config::gate_config::GateConfig;
 use std::path::PathBuf;
 
 /// Bounded-parallelism job executor with per-slot port range isolation.
@@ -94,4 +95,36 @@ pub struct GateArgs {
     /// manually-specified `program`/`program-args`.
     #[arg(long)]
     pub pre_build_target_name: Option<String>,
+}
+
+// The parsed command line as the core reads it. Paths go across as text, the
+// way every message about them already spelled them.
+impl From<GateArgs> for GateConfig {
+    fn from(args: GateArgs) -> Self {
+        GateConfig {
+            max_parallel: args.max_parallel,
+            port_range_base: args.port_range_base,
+            port_range_size: args.port_range_size,
+            port_env_base: args.port_env_base,
+            port_env_count: args.port_env_count,
+            timeout_secs: args.timeout_secs,
+            log_dir: args.log_dir.to_string_lossy().into_owned(),
+            program: args.program,
+            program_args: args.program_args,
+            jobs: args.jobs,
+            jobs_paths: args
+                .jobs_paths
+                .iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect(),
+            jobs_file: args
+                .jobs_file
+                .map(|path| path.to_string_lossy().into_owned()),
+            random: args.random,
+            seed: args.seed,
+            pre_build_program: args.pre_build_program,
+            pre_build_args: args.pre_build_args,
+            pre_build_target_name: args.pre_build_target_name,
+        }
+    }
 }

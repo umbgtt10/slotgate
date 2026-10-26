@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use crate::config::gate_args::GateArgs;
+use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
 
 const JOB_PLACEHOLDER: &str = "{job}";
@@ -10,7 +10,7 @@ const JOB_PLACEHOLDER: &str = "{job}";
 pub struct JobListBuilder;
 
 impl JobListBuilder {
-    pub fn build(args: &GateArgs) -> Vec<Job> {
+    pub fn build(args: &GateConfig) -> Vec<Job> {
         args.jobs
             .iter()
             .map(|job_name| Job {

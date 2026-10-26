@@ -4,7 +4,6 @@
 
 pub mod compiler_artifact_parser_tests;
 pub mod config_failure_tests;
-pub mod gate_args_tests;
 pub mod job_list_builder_tests;
 pub mod job_source_tests;
 pub mod module_path_tests;

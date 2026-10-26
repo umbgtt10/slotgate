@@ -1,0 +1,27 @@
+[package]
+name = "slotgate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A bounded-parallelism job runner that gives each slot its own disjoint port range, so port-binding tests run in parallel without collisions."
+readme = "../README.md"
+keywords = ["testing", "parallel", "ports", "ci"]
+categories = ["development-tools::testing", "command-line-utilities"]
+
+[lib]
+name = "slotgate_cli"
+
+[[bin]]
+name = "slotgate"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+clap = { workspace = true }
+slotgate-core = { workspace = true }
+tokio = { workspace = true }
