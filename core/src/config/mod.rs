@@ -10,6 +10,7 @@ pub mod job_source;
 pub mod module_path;
 pub mod pre_build_resolver;
 pub mod pre_build_runner;
-pub mod rust_file_finder;
+pub mod read_failure;
+pub mod rust_file;
 pub mod test_name_reader;
 pub mod test_path_scanner;

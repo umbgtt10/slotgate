@@ -4,10 +4,10 @@
 
 use crate::config::config_failure::ConfigFailure;
 use crate::config::module_path::ModulePath;
-use crate::config::rust_file_finder::RustFileFinder;
+use crate::config::read_failure::ReadFailure;
 use crate::config::test_name_reader::TestNameReader;
-use std::fs::read_to_string;
-use std::path::PathBuf;
+use crate::traits::source_tree::SourceTree;
+use std::sync::Arc;
 
 // The job names a tree already contains, so a caller states where its tests are
 // instead of enumerating them.
@@ -19,47 +19,38 @@ use std::path::PathBuf;
 // the rest.
 //
 // Finding the files, naming the module and reading the tests are three jobs and
-// live in three files. `iceberg4rust` said so: written as one type this scored
-// 10.13 against a ceiling of 1.8, on nineteen points of private complexity.
-// The split was not a concession to the gate -- the gate was right that one file
-// had quietly taken on three subjects.
-pub struct TestPathScanner;
+// live in three places: the source tree finds and reads, `ModulePath` names,
+// `TestNameReader` reads the tests.
+pub struct TestPathScanner {
+    tree: Arc<dyn SourceTree>,
+}
 
 impl TestPathScanner {
-    pub fn scan(roots: &[PathBuf]) -> Result<Vec<String>, ConfigFailure> {
+    pub fn new(tree: Arc<dyn SourceTree>) -> Self {
+        Self { tree }
+    }
+
+    pub fn scan(&self, roots: &[String]) -> Result<Vec<String>, ConfigFailure> {
         let mut names = Vec::new();
         for root in roots {
-            if !root.exists() {
-                return Err(ConfigFailure::JobsPathMissing(root.display().to_string()));
+            if !self.tree.contains(root) {
+                return Err(ConfigFailure::JobsPathMissing(root.clone()));
             }
-            for file in RustFileFinder::under(root)? {
-                let module = ModulePath::of(root, &file);
-                let contents =
-                    read_to_string(&file).map_err(|error| ConfigFailure::Unreadable {
-                        path: file.display().to_string(),
-                        reason: error.to_string(),
-                    })?;
+            for file in self.tree.rust_files(root).map_err(Self::unreadable)? {
+                let module = ModulePath::of(root, &file.path);
                 names.extend(
-                    TestNameReader::names_in(&contents)
+                    TestNameReader::names_in(&file.contents)
                         .into_iter()
                         .map(|test| Self::qualified(&module, &test)),
                 );
             }
         }
         if names.is_empty() {
-            return Err(ConfigFailure::NoTests(Self::listed(roots)));
+            return Err(ConfigFailure::NoTests(roots.join(", ")));
         }
         names.sort();
         names.dedup();
         Ok(names)
-    }
-
-    fn listed(roots: &[PathBuf]) -> String {
-        roots
-            .iter()
-            .map(|root| root.display().to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
     }
 
     fn qualified(module: &str, test: &str) -> String {
@@ -67,6 +58,13 @@ impl TestPathScanner {
             test.to_string()
         } else {
             format!("{module}::{test}")
+        }
+    }
+
+    fn unreadable(failure: ReadFailure) -> ConfigFailure {
+        ConfigFailure::Unreadable {
+            path: failure.path,
+            reason: failure.reason,
         }
     }
 }

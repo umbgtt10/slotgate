@@ -5,8 +5,8 @@
 use crate::config::config_failure::ConfigFailure;
 use crate::config::gate_config::GateConfig;
 use crate::config::test_path_scanner::TestPathScanner;
-use std::fs::read_to_string;
-use std::path::PathBuf;
+use crate::traits::source_tree::SourceTree;
+use std::sync::Arc;
 
 // Where the job names come from: the command line, or a file naming one per
 // line.
@@ -23,19 +23,25 @@ use std::path::PathBuf;
 // Stating both is an error rather than a precedence rule. Two lists is two
 // ideas of what to run, and quietly preferring one of them is how a run ends up
 // executing something other than what its author is reading.
-pub struct JobSource;
+pub struct JobSource {
+    tree: Arc<dyn SourceTree>,
+}
 
 impl JobSource {
+    pub fn new(tree: Arc<dyn SourceTree>) -> Self {
+        Self { tree }
+    }
+
     // The args a run should use, with `jobs` filled in from wherever it was
     // stated. Returned whole rather than as a bare list so the caller keeps the
     // shape it already has for the pre-build step, and so nothing downstream
     // has to know there was ever more than one way to name a job.
-    pub fn apply(args: GateConfig) -> Result<GateConfig, ConfigFailure> {
-        let jobs = Self::resolve(&args)?;
+    pub fn apply(&self, args: GateConfig) -> Result<GateConfig, ConfigFailure> {
+        let jobs = self.resolve(&args)?;
         Ok(GateConfig { jobs, ..args })
     }
 
-    pub fn resolve(args: &GateConfig) -> Result<Vec<String>, ConfigFailure> {
+    pub fn resolve(&self, args: &GateConfig) -> Result<Vec<String>, ConfigFailure> {
         let stated: Vec<&str> = [
             (!args.jobs.is_empty()).then_some("--jobs"),
             (!args.jobs_paths.is_empty()).then_some("--jobs-path"),
@@ -47,14 +53,8 @@ impl JobSource {
 
         match stated.as_slice() {
             ["--jobs"] => Ok(args.jobs.clone()),
-            ["--jobs-path"] => TestPathScanner::scan(
-                &args
-                    .jobs_paths
-                    .iter()
-                    .map(PathBuf::from)
-                    .collect::<Vec<_>>(),
-            ),
-            ["--jobs-file"] => Self::read(&args.jobs_file.clone().unwrap_or_default()),
+            ["--jobs-path"] => TestPathScanner::new(Arc::clone(&self.tree)).scan(&args.jobs_paths),
+            ["--jobs-file"] => self.read(&args.jobs_file.clone().unwrap_or_default()),
             [] => Err(ConfigFailure::NoJobs),
             several => Err(ConfigFailure::SeveralJobLists(
                 several.iter().map(|stated| (*stated).to_string()).collect(),
@@ -74,11 +74,14 @@ impl JobSource {
     // nothing runs zero tests and exits 0, so the job is reported as passed.
     // `etheram-ibft` did exactly that on its first run: one byzantine cluster
     // test "passing" in 0.07 seconds while its siblings took fifty.
-    fn read(path: &str) -> Result<Vec<String>, ConfigFailure> {
-        let contents = read_to_string(path).map_err(|error| ConfigFailure::JobsFileUnreadable {
-            path: path.to_string(),
-            reason: error.to_string(),
-        })?;
+    fn read(&self, path: &str) -> Result<Vec<String>, ConfigFailure> {
+        let contents =
+            self.tree
+                .read_text(path)
+                .map_err(|failure| ConfigFailure::JobsFileUnreadable {
+                    path: path.to_string(),
+                    reason: failure.reason,
+                })?;
         let names: Vec<String> = contents
             .strip_prefix('\u{feff}')
             .unwrap_or(&contents)

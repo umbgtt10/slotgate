@@ -7,6 +7,7 @@
 // that execute jobs, end to end, are the command line's
 // (`cli/tests/invocation/entry_point_tests.rs`).
 
+use crate::support::in_memory_source_tree::InMemorySourceTree;
 use crate::time::seed_source_tests::FakeSeedSource;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::execution::gate_runner::GateRunner;
@@ -22,6 +23,7 @@ async fn run_of_a_gate_with_no_job_list_prints_why_and_returns_failed() {
     let gate = GateRunner::new(
         Arc::new(TokioJobClock::new(Duration::from_secs(30))),
         Arc::new(FakeSeedSource::new(7)),
+        Arc::new(InMemorySourceTree::new()),
     );
     let args = GateConfig {
         program: String::from("cargo"),

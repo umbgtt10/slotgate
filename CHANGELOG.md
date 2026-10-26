@@ -33,6 +33,17 @@ the commit before the split after every step.
   `GateConfig`.
 - `main.rs` moves to cli and hands the parsed arguments to
   `slotgate_cli::invocation::entry_point::EntryPoint`, the composition root.
+- A `SourceTree` port, in a new `traits` module, answers whether a path
+  exists, a file's text, and every `.rs` file under a root, read:
+  `JobSource` and `TestPathScanner` are built with one
+  (`new(Arc<dyn SourceTree>)`) and their `apply`, `resolve` and `scan` are
+  methods; `scan` takes the roots as text. A file or folder that cannot be
+  read is a `config::read_failure::ReadFailure`, a file the tree found a
+  `config::rust_file::RustFile`. `ModulePath::of` takes both paths as text and
+  reads either separator on every platform. `GateRunner::new` takes a source
+  tree third. `RustFileFinder` moves to `slotgate_cli::system::rust_file_finder`
+  and fails with a `ReadFailure`; `slotgate_cli::system::disk_source_tree::
+  DiskSourceTree` is the real file system behind the port.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for

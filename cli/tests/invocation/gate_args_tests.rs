@@ -7,9 +7,11 @@ use clap::Parser;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::config::job_source::JobSource;
 use slotgate_cli::invocation::gate_args::GateArgs;
+use slotgate_cli::system::disk_source_tree::DiskSourceTree;
 use std::env::temp_dir;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn owned(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| (*name).to_string()).collect()
@@ -41,7 +43,9 @@ fn apply_of_args_parsed_with_only_a_file_resolves_that_file() {
     ]));
 
     // Act
-    let applied = JobSource::apply(args).expect("a parsed --jobs-file should resolve");
+    let applied = JobSource::new(Arc::new(DiskSourceTree))
+        .apply(args)
+        .expect("a parsed --jobs-file should resolve");
 
     // Assert
     assert_eq!(applied.jobs, owned(&["alpha", "beta"]));

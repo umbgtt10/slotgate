@@ -16,12 +16,12 @@ const RUST_EXTENSION: &str = "rs";
 // Sorted at every level, so one tree walks the same twice. Shuffling is a
 // separate decision, taken by `--random` and nothing else -- a walk that varied
 // on its own would make `--seed` a lie.
-use crate::config::config_failure::ConfigFailure;
+use slotgate::config::read_failure::ReadFailure;
 
 pub struct RustFileFinder;
 
 impl RustFileFinder {
-    pub fn under(path: &Path) -> Result<Vec<PathBuf>, ConfigFailure> {
+    pub fn under(path: &Path) -> Result<Vec<PathBuf>, ReadFailure> {
         if !path.is_dir() {
             return Ok(if Self::is_rust(path) {
                 vec![path.to_path_buf()]
@@ -36,9 +36,9 @@ impl RustFileFinder {
         Ok(found)
     }
 
-    fn children(path: &Path) -> Result<Vec<PathBuf>, ConfigFailure> {
+    fn children(path: &Path) -> Result<Vec<PathBuf>, ReadFailure> {
         let mut children: Vec<PathBuf> = read_dir(path)
-            .map_err(|error| ConfigFailure::Unreadable {
+            .map_err(|error| ReadFailure {
                 path: path.display().to_string(),
                 reason: error.to_string(),
             })?

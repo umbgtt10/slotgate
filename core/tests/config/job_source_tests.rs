@@ -10,13 +10,14 @@
 // "the filename or extension is too long" and no indication that the length is
 // the problem. `--jobs-file` states them one per line instead.
 
+use crate::support::in_memory_source_tree::InMemorySourceTree;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::config::job_source::JobSource;
-use std::env;
-use std::fs;
-use std::path::PathBuf;
+use std::sync::Arc;
 
-fn args_with(jobs: Vec<String>, jobs_file: Option<PathBuf>) -> GateConfig {
+const JOBS_FILE: &str = "jobs.txt";
+
+fn args_with(jobs: Vec<String>, jobs_file: Option<String>) -> GateConfig {
     GateConfig {
         max_parallel: 1,
         port_range_base: 30000,
@@ -27,15 +28,19 @@ fn args_with(jobs: Vec<String>, jobs_file: Option<PathBuf>) -> GateConfig {
         log_dir: String::from("logs"),
         program: "cargo".to_string(),
         jobs,
-        jobs_file: jobs_file.map(|path| path.to_string_lossy().into_owned()),
+        jobs_file,
         ..Default::default()
     }
 }
 
-fn file_with(name: &str, contents: &str) -> PathBuf {
-    let path = env::temp_dir().join(format!("slotgate_jobs_{name}.txt"));
-    fs::write(&path, contents).expect("write the job file");
-    path
+fn file_with(contents: &str) -> JobSource {
+    JobSource::new(Arc::new(
+        InMemorySourceTree::new().with_file(JOBS_FILE, contents),
+    ))
+}
+
+fn no_files() -> JobSource {
+    JobSource::new(Arc::new(InMemorySourceTree::new()))
 }
 
 fn owned(names: &[&str]) -> Vec<String> {
@@ -47,11 +52,11 @@ fn owned(names: &[&str]) -> Vec<String> {
 #[test]
 fn apply_of_a_file_returns_args_carrying_those_jobs() {
     // Arrange
-    let path = file_with("applied", "alpha\nbeta\n");
-    let args = args_with(Vec::new(), Some(path));
+    let source = file_with("alpha\nbeta\n");
+    let args = args_with(Vec::new(), Some(String::from(JOBS_FILE)));
 
     // Act
-    let applied = JobSource::apply(args).expect("the file should resolve");
+    let applied = source.apply(args).expect("the file should resolve");
 
     // Assert
     assert_eq!(applied.jobs, owned(&["alpha", "beta"]));
@@ -60,10 +65,11 @@ fn apply_of_a_file_returns_args_carrying_those_jobs() {
 #[test]
 fn apply_with_neither_a_list_nor_a_file_is_an_error() {
     // Arrange
+    let source = no_files();
     let args = args_with(Vec::new(), None);
 
     // Act
-    let applied = JobSource::apply(args);
+    let applied = source.apply(args);
 
     // Assert
     assert!(applied.is_err(), "expected an error");
@@ -72,11 +78,11 @@ fn apply_with_neither_a_list_nor_a_file_is_an_error() {
 #[test]
 fn resolve_of_a_file_and_a_list_together_is_an_error() {
     // Arrange
-    let path = file_with("both", "alpha\n");
-    let args = args_with(owned(&["beta"]), Some(path));
+    let source = file_with("alpha\n");
+    let args = args_with(owned(&["beta"]), Some(String::from(JOBS_FILE)));
 
     // Act
-    let resolved = JobSource::resolve(&args);
+    let resolved = source.resolve(&args);
 
     // Assert
     assert!(resolved.is_err(), "{resolved:?}");
@@ -89,11 +95,11 @@ fn resolve_of_a_file_holding_more_jobs_than_a_command_line_reads_them_all() {
     let names: Vec<String> = (0..1_000)
         .map(|index| format!("cluster::scenario_number_{index}_that_carries_a_realistic_name"))
         .collect();
-    let path = file_with("large", &format!("{}\n", names.join("\n")));
-    let args = args_with(Vec::new(), Some(path));
+    let source = file_with(&format!("{}\n", names.join("\n")));
+    let args = args_with(Vec::new(), Some(String::from(JOBS_FILE)));
 
     // Act
-    let resolved = JobSource::resolve(&args).expect("the file should resolve");
+    let resolved = source.resolve(&args).expect("the file should resolve");
 
     // Assert
     assert_eq!(resolved.len(), 1_000);
@@ -106,11 +112,11 @@ fn resolve_of_a_file_holding_more_jobs_than_a_command_line_reads_them_all() {
 #[test]
 fn resolve_of_a_file_reads_one_job_per_line() {
     // Arrange
-    let path = file_with("plain", "alpha\nbeta\ngamma\n");
-    let args = args_with(Vec::new(), Some(path));
+    let source = file_with("alpha\nbeta\ngamma\n");
+    let args = args_with(Vec::new(), Some(String::from(JOBS_FILE)));
 
     // Act
-    let resolved = JobSource::resolve(&args).expect("the file should resolve");
+    let resolved = source.resolve(&args).expect("the file should resolve");
 
     // Assert
     assert_eq!(resolved, owned(&["alpha", "beta", "gamma"]));
@@ -121,11 +127,11 @@ fn resolve_of_a_file_reads_one_job_per_line() {
 #[test]
 fn resolve_of_a_file_skips_blank_lines_and_trims() {
     // Arrange
-    let path = file_with("ragged", "\n  alpha  \n\n\tbeta\n   \n");
-    let args = args_with(Vec::new(), Some(path));
+    let source = file_with("\n  alpha  \n\n\tbeta\n   \n");
+    let args = args_with(Vec::new(), Some(String::from(JOBS_FILE)));
 
     // Act
-    let resolved = JobSource::resolve(&args).expect("the file should resolve");
+    let resolved = source.resolve(&args).expect("the file should resolve");
 
     // Assert
     assert_eq!(resolved, owned(&["alpha", "beta"]));
@@ -139,11 +145,11 @@ fn resolve_of_a_file_skips_blank_lines_and_trims() {
 #[test]
 fn resolve_of_a_file_written_with_a_byte_order_mark_ignores_it() {
     // Arrange
-    let path = file_with("bom", "\u{feff}alpha\nbeta\n");
-    let args = args_with(Vec::new(), Some(path));
+    let source = file_with("\u{feff}alpha\nbeta\n");
+    let args = args_with(Vec::new(), Some(String::from(JOBS_FILE)));
 
     // Act
-    let resolved = JobSource::resolve(&args).expect("the file should resolve");
+    let resolved = source.resolve(&args).expect("the file should resolve");
 
     // Assert
     assert_eq!(resolved, owned(&["alpha", "beta"]));
@@ -152,10 +158,11 @@ fn resolve_of_a_file_written_with_a_byte_order_mark_ignores_it() {
 #[test]
 fn resolve_of_a_missing_file_is_an_error() {
     // Arrange
-    let args = args_with(Vec::new(), Some(PathBuf::from("no_such_job_file.txt")));
+    let source = no_files();
+    let args = args_with(Vec::new(), Some(String::from("no_such_job_file.txt")));
 
     // Act
-    let resolved = JobSource::resolve(&args);
+    let resolved = source.resolve(&args);
 
     // Assert
     assert!(resolved.is_err(), "{resolved:?}");
@@ -164,11 +171,11 @@ fn resolve_of_a_missing_file_is_an_error() {
 #[test]
 fn resolve_of_an_empty_file_is_an_error() {
     // Arrange
-    let path = file_with("empty", "\n  \n\n");
-    let args = args_with(Vec::new(), Some(path));
+    let source = file_with("\n  \n\n");
+    let args = args_with(Vec::new(), Some(String::from(JOBS_FILE)));
 
     // Act
-    let resolved = JobSource::resolve(&args);
+    let resolved = source.resolve(&args);
 
     // Assert
     assert!(resolved.is_err(), "{resolved:?}");
@@ -177,10 +184,11 @@ fn resolve_of_an_empty_file_is_an_error() {
 #[test]
 fn resolve_with_neither_a_list_nor_a_file_is_an_error() {
     // Arrange
+    let source = no_files();
     let args = args_with(Vec::new(), None);
 
     // Act
-    let resolved = JobSource::resolve(&args);
+    let resolved = source.resolve(&args);
 
     // Assert
     assert!(resolved.is_err(), "{resolved:?}");
@@ -190,10 +198,11 @@ fn resolve_with_neither_a_list_nor_a_file_is_an_error() {
 #[test]
 fn resolve_without_a_file_returns_the_listed_jobs() {
     // Arrange
+    let source = no_files();
     let args = args_with(owned(&["alpha", "beta"]), None);
 
     // Act
-    let resolved = JobSource::resolve(&args).expect("a plain list should resolve");
+    let resolved = source.resolve(&args).expect("a plain list should resolve");
 
     // Assert
     assert_eq!(resolved, owned(&["alpha", "beta"]));

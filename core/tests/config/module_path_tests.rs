@@ -6,12 +6,11 @@
 // names a compiled test binary will answer to.
 
 use slotgate::config::module_path::ModulePath;
-use std::path::Path;
 
 #[test]
 fn of_a_file_directly_under_the_root_is_its_stem() {
     // Arrange & Act
-    let module = ModulePath::of(Path::new("tests"), Path::new("tests/widget_tests.rs"));
+    let module = ModulePath::of("tests", "tests/widget_tests.rs");
 
     // Assert
     assert_eq!(module, "widget_tests");
@@ -20,7 +19,7 @@ fn of_a_file_directly_under_the_root_is_its_stem() {
 #[test]
 fn of_a_mod_file_names_its_directory_and_not_itself() {
     // Arrange & Act
-    let module = ModulePath::of(Path::new("tests"), Path::new("tests/cluster/mod.rs"));
+    let module = ModulePath::of("tests", "tests/cluster/mod.rs");
 
     // Assert
     assert_eq!(module, "cluster");
@@ -29,10 +28,7 @@ fn of_a_mod_file_names_its_directory_and_not_itself() {
 #[test]
 fn of_a_nested_file_joins_every_directory_below_the_root() {
     // Arrange & Act
-    let module = ModulePath::of(
-        Path::new("tests"),
-        Path::new("tests/cluster/recovery/retention_tests.rs"),
-    );
+    let module = ModulePath::of("tests", "tests/cluster/recovery/retention_tests.rs");
 
     // Assert
     assert_eq!(module, "cluster::recovery::retention_tests");
@@ -42,7 +38,7 @@ fn of_a_nested_file_joins_every_directory_below_the_root() {
 #[test]
 fn of_a_root_that_is_the_file_itself_is_that_files_stem() {
     // Arrange
-    let path = Path::new("tests/widget_tests.rs");
+    let path = "tests/widget_tests.rs";
 
     // Act
     let module = ModulePath::of(path, path);

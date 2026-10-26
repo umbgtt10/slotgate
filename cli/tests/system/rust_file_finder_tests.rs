@@ -5,7 +5,7 @@
 // Every `.rs` file under a path, in a settled order so one tree walks the same
 // twice.
 
-use slotgate::config::rust_file_finder::RustFileFinder;
+use slotgate_cli::system::rust_file_finder::RustFileFinder;
 use std::env;
 use std::fs;
 use std::path::Path;

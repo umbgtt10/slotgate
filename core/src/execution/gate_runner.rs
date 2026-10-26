@@ -14,6 +14,7 @@ use crate::execution::run_summary::RunSummary;
 use crate::ports::port_range_allocator::PortRangeAllocator;
 use crate::time::job_clock::JobClock;
 use crate::time::seed_source::SeedSource;
+use crate::traits::source_tree::SourceTree;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -21,11 +22,20 @@ use std::sync::Arc;
 pub struct GateRunner {
     clock: Arc<dyn JobClock>,
     seeds: Arc<dyn SeedSource>,
+    source: JobSource,
 }
 
 impl GateRunner {
-    pub fn new(clock: Arc<dyn JobClock>, seeds: Arc<dyn SeedSource>) -> Self {
-        Self { clock, seeds }
+    pub fn new(
+        clock: Arc<dyn JobClock>,
+        seeds: Arc<dyn SeedSource>,
+        tree: Arc<dyn SourceTree>,
+    ) -> Self {
+        Self {
+            clock,
+            seeds,
+            source: JobSource::new(tree),
+        }
     }
 
     pub async fn run(&self, args: GateConfig) -> ExitCode {
@@ -35,7 +45,7 @@ impl GateRunner {
         // which is what lets the two join.
         let effective_args = match PreBuildResolver::resolve(&args)
             .await
-            .and_then(JobSource::apply)
+            .and_then(|resolved| self.source.apply(resolved))
         {
             Ok(effective_args) => effective_args,
             Err(error) => {
