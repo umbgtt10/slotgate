@@ -2,6 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
 const MODULE_FILE_STEM: &str = "mod";
 const RUST_SUFFIX: &str = ".rs";
 const SEPARATORS: [char; 2] = ['/', '\\'];

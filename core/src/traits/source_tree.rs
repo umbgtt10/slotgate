@@ -4,6 +4,8 @@
 
 use crate::config::read_failure::ReadFailure;
 use crate::config::rust_file::RustFile;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 // The files a run's job list is read from: a jobs file, and the trees a
 // `--jobs-path` names. A port, so working out the job list needs no disk.

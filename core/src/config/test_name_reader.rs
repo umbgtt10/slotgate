@@ -2,6 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
 // The test names one file declares.
 //
 // Read line by line rather than parsed. A parser would mean taking `syn` into a

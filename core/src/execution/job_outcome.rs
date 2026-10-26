@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::execution::job_status::JobStatus;
+use alloc::string::String;
 use core::time::Duration;
 
 pub struct JobOutcome {

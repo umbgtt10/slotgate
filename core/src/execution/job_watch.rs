@@ -5,9 +5,11 @@
 use crate::execution::job_status::JobStatus;
 use crate::traits::job_clock::JobClock;
 use crate::traits::running_job::RunningJob;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::sync::Arc;
 use core::future::poll_fn;
 use core::task::Poll;
-use std::sync::Arc;
 
 const NO_TESTS_MARKER: &str = "running 0 tests";
 

@@ -6,10 +6,10 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "The library behind slotgate: where a run's jobs come from, the order they run in, which port range each slot owns, how a job's outcome is judged and what the run reports"
+description = "The policy behind slotgate: which jobs run, in what order, in which slot's port range, and what each outcome means -- with no runtime, process or file system of its own"
 readme = "README.md"
-keywords = ["testing", "parallel", "ports"]
-categories = ["development-tools::testing"]
+keywords = ["testing", "parallel", "ports", "no-std"]
+categories = ["development-tools::testing", "no-std"]
 
 [lib]
 name = "slotgate"

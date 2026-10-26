@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::traits::running_job::RunningJob;
+use alloc::boxed::Box;
+use alloc::string::String;
 
 // A job a launcher started: the process to wait on or kill, and where its
 // output is being written.

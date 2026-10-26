@@ -2,6 +2,8 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use alloc::string::String;
+
 // One `.rs` file a source tree found under a root: its path as text, and what
 // it holds.
 #[derive(Debug, Clone, PartialEq, Eq)]

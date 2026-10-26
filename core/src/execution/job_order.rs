@@ -6,7 +6,9 @@ use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
 use crate::traits::console::Console;
 use crate::traits::seed_source::SeedSource;
-use std::sync::Arc;
+use alloc::format;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 // The order the jobs are handed to the pool.
 //

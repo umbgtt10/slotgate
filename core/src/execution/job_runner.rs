@@ -12,7 +12,10 @@ use crate::execution::launched_job::LaunchedJob;
 use crate::ports::port_range::PortRange;
 use crate::traits::job_clock::JobClock;
 use crate::traits::job_launcher::JobLauncher;
-use std::sync::Arc;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::sync::Arc;
+use alloc::vec;
 
 const JOB_NAME_ENV_VAR: &str = "SLOTGATE_JOB_NAME";
 

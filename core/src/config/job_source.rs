@@ -6,7 +6,10 @@ use crate::config::config_failure::ConfigFailure;
 use crate::config::gate_config::GateConfig;
 use crate::config::test_path_scanner::TestPathScanner;
 use crate::traits::source_tree::SourceTree;
-use std::sync::Arc;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 // Where the job names come from: the command line, or a file naming one per
 // line.

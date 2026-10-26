@@ -7,7 +7,11 @@ use crate::config::module_path::ModulePath;
 use crate::config::read_failure::ReadFailure;
 use crate::config::test_name_reader::TestNameReader;
 use crate::traits::source_tree::SourceTree;
-use std::sync::Arc;
+use alloc::format;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 // The job names a tree already contains, so a caller states where its tests are
 // instead of enumerating them.

@@ -2,6 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
 // Everything a run is configured from: the command line's whole surface, read
 // by nobody's parser. The paths are text -- what the caller wrote, which is
 // also what every message about them says -- and only an adapter turns one

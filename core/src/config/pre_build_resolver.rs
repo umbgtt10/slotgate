@@ -6,7 +6,9 @@ use crate::config::config_failure::ConfigFailure;
 use crate::config::gate_config::GateConfig;
 use crate::traits::console::Console;
 use crate::traits::pre_build::PreBuild;
-use std::sync::Arc;
+use alloc::format;
+use alloc::string::String;
+use alloc::sync::Arc;
 
 const LIBTEST_ARGS_FOR_DISCOVERED_BINARY: [&str; 3] = ["{job}", "--exact", "--test-threads=1"];
 

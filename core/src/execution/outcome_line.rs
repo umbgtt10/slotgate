@@ -4,6 +4,8 @@
 
 use crate::execution::job_outcome::JobOutcome;
 use crate::execution::job_status::JobStatus;
+use alloc::format;
+use alloc::string::String;
 
 pub struct OutcomeLine;
 

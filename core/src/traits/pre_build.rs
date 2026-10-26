@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::config::config_failure::ConfigFailure;
+use alloc::boxed::Box;
+use alloc::string::String;
 use core::future::Future;
 use core::pin::Pin;
 

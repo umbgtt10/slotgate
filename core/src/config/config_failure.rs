@@ -2,7 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use std::fmt;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt;
 
 // Why a run's configuration could not be worked out: no job list or several, a
 // jobs file unreadable or naming nothing, a jobs path missing or holding no

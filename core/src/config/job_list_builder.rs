@@ -4,6 +4,7 @@
 
 use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
+use alloc::vec::Vec;
 
 const JOB_PLACEHOLDER: &str = "{job}";
 

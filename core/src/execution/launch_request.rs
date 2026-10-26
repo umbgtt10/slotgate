@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::execution::environment_variable::EnvironmentVariable;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 // What a launcher is asked to start: the program and its arguments, the
 // environment the job is handed, and the name of the directory, under the

@@ -17,7 +17,8 @@ use crate::traits::job_executor::JobExecutor;
 use crate::traits::pre_build::PreBuild;
 use crate::traits::seed_source::SeedSource;
 use crate::traits::source_tree::SourceTree;
-use std::sync::Arc;
+use alloc::format;
+use alloc::sync::Arc;
 
 // A whole run: the arguments it really uses, the jobs in the order they go, the
 // plan, every outcome as it lands, the summary and the verdict. Built from the

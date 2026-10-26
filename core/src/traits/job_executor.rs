@@ -4,9 +4,11 @@
 
 use crate::execution::job::Job;
 use crate::execution::job_outcome::JobOutcome;
+use alloc::boxed::Box;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
-use std::sync::Arc;
 
 // Runs every job, as many at once as there are slots, telling `on_outcome` of
 // each as it finishes and handing back the outcomes in the order the jobs were

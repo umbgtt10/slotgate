@@ -81,6 +81,8 @@ the commit before the split after every step.
   process is cli's `ProcessJobLauncher` -- the log directory, its two files,
   `SLOTGATE_JOB_LOG_DIR` and the spawn -- and `ChildProcess`. tokio leaves
   the library.
+- The library is `#![no_std]`: it allocates through `alloc` and depends on no
+  crate, so nothing links the standard library into it.
 
 ### Changed
 - Time reaches the library through two ports in a new `time` module, for
