@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-27
+
 The command line, output, exit codes, slots and port ranges are unchanged. The
 library is not: one `pub(crate)` method is gone, a constructor is replaced,
 three types take time through ports their constructors are handed, and two keep
