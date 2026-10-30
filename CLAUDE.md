@@ -48,7 +48,7 @@ Stage 2 is `cargo xtask stage2` -- a real crate under `xtask/`, gated like any
 other code, rather than a script. Each gate is a `Gate` implementation
 constructed against a `CommandRunner` trait, so the argument lists and the
 failure messages are covered by `xtask`'s own integration tests. It runs a
-check of its own and six installed cargo subcommands, in this order:
+check of its own and seven installed cargo subcommands, in this order:
 
 | gate | asks |
 |---|---|
@@ -59,6 +59,7 @@ check of its own and six installed cargo subcommands, in this order:
 | `cargo crap4rust` | is any function complex and untested |
 | `cargo twin4rust` | does every source file have a mirrored test file |
 | `cargo iceberg4rust` | is any file's private implementation risk too high |
+| `cargo deny` | do the dependencies carry an advisory, a refused licence or a foreign source |
 
 The technology-free gate runs **first**. It asks three things of `core`:
 its manifest names no crate in any section (an allow-list, empty for
@@ -117,6 +118,22 @@ The stern gate is scoped to `slotgate-core`, `slotgate` **and** `xtask`. The
 crate that runs the gates is not exempt from them. crap4rust, twin4rust and
 iceberg4rust measure the two published crates.
 
+cargo-deny runs **last**, and is the one gate that can turn red with nothing
+changed: its advisories come from the RustSec database, so a newly published
+one fails an untouched checkout, and it fetches that database over the network.
+That is the point of it, and running last keeps it from hiding what the house
+gates say about a change. `deny.toml` is the same file in every *4rust
+repository and slotgate: licences MIT, Apache-2.0 and Unicode-3.0 -- the union
+of what their trees carry -- crates.io as the only source, duplicate versions a
+warning, and a wildcard requirement refused except a path dependency in an
+unpublished crate. An accepted advisory goes in `[advisories] ignore` with its
+id and its reason. The gate fetches the advisory database first, on its own and
+up to three times, then checks `--frozen` -- locked and offline -- so a fetch
+that keeps failing reports the gate as unable to run, never as an advisory
+found. It decodes cargo-deny's exit code, one bit per failed check, into the
+checks' names; a `deny.toml` it cannot read exits 1, as advisories does, and the
+streamed output says which.
+
 `cargo install just`
 `cargo install cargo-llvm-cov`
 `cargo install cargo-stern4rust`
@@ -125,6 +142,7 @@ iceberg4rust measure the two published crates.
 `cargo install cargo-twin4rust`
 `cargo install cargo-iceberg4rust`
 `cargo install --locked cargo-shear --version 1.14.0`
+`cargo install --locked cargo-deny --version 0.20.2`
 
 ## Layout
 
