@@ -2,7 +2,6 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-use clap::Error;
 use clap::Parser;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::config::job_source::JobSource;
@@ -11,16 +10,13 @@ use slotgate_cli::system::disk_source_tree::DiskSourceTree;
 use std::env::temp_dir;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::Arc;
+
+const BINARY: &str = env!("CARGO_BIN_EXE_slotgate");
 
 fn owned(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| (*name).to_string()).collect()
-}
-
-fn parse(extra: &[&str]) -> Result<GateArgs, Error> {
-    let mut argv = vec!["slotgate", "--program", "true"];
-    argv.extend_from_slice(extra);
-    GateArgs::try_parse_from(argv)
 }
 
 // Parsed by clap rather than built by hand, because that is where this went
@@ -91,17 +87,37 @@ fn from_carries_every_option_it_was_given() {
     );
 }
 
+// The smallest range a slot can own is still a range, so the bound rejects zero
+// rather than anything a caller might legitimately want. The binary runs itself
+// as the job, which passes on every platform.
 #[test]
-fn try_parse_from_a_port_range_size_of_one_returns_ok() {
-    // Arrange & Act
-    let parsed = parse(&["--port-range-size", "1"]);
+fn main_with_a_port_range_size_of_one_plans_one_port_per_slot() {
+    // Arrange
+    let log_dir = temp_dir().join("slotgate_gate_args_tests");
 
-    // Assert -- the smallest range a slot can own is still a range, so the
-    // bound rejects zero rather than anything a caller might legitimately want.
-    assert_eq!(
-        parsed.expect("one port is a valid range").port_range_size,
-        1
+    // Act
+    let output = Command::new(BINARY)
+        .args(["--program", BINARY, "--program-args=--help"])
+        .args([
+            "--jobs",
+            "alpha",
+            "--max-parallel",
+            "1",
+            "--port-range-size",
+            "1",
+        ])
+        .arg("--log-dir")
+        .arg(&log_dir)
+        .output()
+        .expect("run slotgate");
+
+    // Assert
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.starts_with("SLOTGATE — 1 jobs, max_parallel=1, ports 30000-30000 per slot\n"),
+        "{stdout}"
     );
+    assert!(output.status.success(), "{stdout}");
 }
 
 // A slot with no ports is meaningless for a tool whose whole job is handing out
@@ -109,10 +125,17 @@ fn try_parse_from_a_port_range_size_of_one_returns_ok() {
 // underflowed: `--port-range-base 0 --port-range-size 0` panicked with
 // "attempt to subtract with overflow" before any job ran.
 #[test]
-fn try_parse_from_a_zero_port_range_size_returns_an_error() {
+fn main_with_a_zero_port_range_size_refuses_it_before_any_job_runs() {
     // Arrange & Act
-    let parsed = parse(&["--port-range-base", "0", "--port-range-size", "0"]);
+    let output = Command::new(BINARY)
+        .args(["--program", BINARY, "--jobs", "alpha"])
+        .args(["--port-range-base", "0", "--port-range-size", "0"])
+        .output()
+        .expect("run slotgate");
 
     // Assert
-    assert!(parsed.is_err());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(2), "{stderr}");
+    assert!(stderr.contains("--port-range-size"), "{stderr}");
+    assert!(output.stdout.is_empty());
 }

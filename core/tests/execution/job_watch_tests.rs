@@ -7,9 +7,12 @@ use crate::support::fake_job_clock::FakeJobClock;
 use crate::support::scripted_running_job::ScriptedRunningJob;
 use slotgate::execution::job_status::JobStatus;
 use slotgate::execution::job_watch::JobWatch;
+use std::pin::pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::task::Context;
+use std::task::Waker;
 
 fn watched(exit: Option<bool>, stdout: Option<&str>, expires: bool) -> (JobStatus, usize) {
     let kills = Arc::new(AtomicUsize::new(0));
@@ -17,6 +20,26 @@ fn watched(exit: Option<bool>, stdout: Option<&str>, expires: bool) -> (JobStatu
     let watch = JobWatch::new(Arc::new(FakeJobClock::new(&[], expires)));
     let status = Blocking::on(watch.status_of(Box::new(process)));
     (status, kills.load(Ordering::SeqCst))
+}
+
+// A job still running while its deadline is not up is left to run: it is
+// neither killed nor timed out, and the watch waits on.
+#[test]
+fn status_of_a_job_still_running_before_its_deadline_is_pending() {
+    // Arrange
+    let kills = Arc::new(AtomicUsize::new(0));
+    let process = ScriptedRunningJob::new(None, None, kills.clone());
+    let watch = JobWatch::new(Arc::new(FakeJobClock::new(&[], false)));
+    let mut status = pin!(watch.status_of(Box::new(process)));
+
+    // Act
+    let polled = status
+        .as_mut()
+        .poll(&mut Context::from_waker(Waker::noop()));
+
+    // Assert
+    assert!(polled.is_pending());
+    assert_eq!(kills.load(Ordering::SeqCst), 0);
 }
 
 // A job that has exited is done, even if its deadline is up by the time anyone

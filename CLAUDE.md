@@ -177,14 +177,14 @@ not.
 
 The module trees under each crate's `src/` are mirrored exactly by its
 `tests/`, which is what `twin4rust` enforces; `core/tests/support/` holds the
-fakes and mirrors nothing:
+fakes and mirrors nothing. `core/src/traits/` has no mirror: its traits define
+no behaviour, and twin4rust rejects a mirror nothing earns.
 
 | Source | Tests |
 |---|---|
 | `core/src/config/` | `core/tests/config/` |
 | `core/src/execution/` | `core/tests/execution/` |
 | `core/src/ports/` | `core/tests/ports/` |
-| `core/src/traits/` | `core/tests/traits/` |
 | `cli/src/execution/` | `cli/tests/execution/` |
 | `cli/src/invocation/` | `cli/tests/invocation/` |
 | `cli/src/system/` | `cli/tests/system/` |
