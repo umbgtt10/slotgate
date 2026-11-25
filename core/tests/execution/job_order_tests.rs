@@ -197,6 +197,34 @@ fn shuffle_of_many_jobs_does_not_return_them_in_the_original_order() {
     assert_ne!(shuffled, original);
 }
 
+// Fisher-Yates reaches every permutation. A walk that never let a job keep its
+// place would reach only the cyclic ones.
+#[test]
+fn shuffle_of_three_jobs_across_seeds_returns_every_permutation() {
+    // Arrange
+    let seeds = 0..60;
+
+    // Act
+    let mut orders: Vec<Vec<String>> = seeds
+        .map(|seed| names(&JobOrder::shuffle(jobs(3), seed)))
+        .collect();
+
+    // Assert
+    orders.sort();
+    orders.dedup();
+    assert_eq!(
+        orders,
+        [
+            ["job_0", "job_1", "job_2"],
+            ["job_0", "job_2", "job_1"],
+            ["job_1", "job_0", "job_2"],
+            ["job_1", "job_2", "job_0"],
+            ["job_2", "job_0", "job_1"],
+            ["job_2", "job_1", "job_0"],
+        ]
+    );
+}
+
 #[test]
 fn shuffle_with_a_different_seed_returns_a_different_order() {
     // Arrange & Act
@@ -205,6 +233,24 @@ fn shuffle_with_a_different_seed_returns_a_different_order() {
 
     // Assert
     assert_ne!(first, second);
+}
+
+// The permutation a seed gives does not change between releases, so a seed one
+// run printed replays in the next. Worked out apart from this code, from
+// SplitMix64's published constants.
+#[test]
+fn shuffle_with_a_recorded_seed_returns_its_recorded_order() {
+    // Arrange & Act
+    let shuffled = names(&JobOrder::shuffle(jobs(10), 4242));
+
+    // Assert
+    assert_eq!(
+        shuffled,
+        [
+            "job_2", "job_1", "job_4", "job_8", "job_6", "job_0", "job_3", "job_9", "job_7",
+            "job_5",
+        ]
+    );
 }
 
 // The whole reason the seed is reported: a run that failed can be run again.

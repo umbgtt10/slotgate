@@ -16,6 +16,16 @@ fn names_in_a_file_whose_attribute_precedes_a_struct_finds_none() {
     assert!(names.is_empty(), "{names:?}");
 }
 
+// Disarmed by the struct, so a function further down is not taken for the test.
+#[test]
+fn names_in_a_file_whose_attribute_precedes_a_struct_ignores_the_function_after_it() {
+    // Arrange & Act
+    let names = TestNameReader::names_in("#[test]\nstruct NotATest;\nfn helper() {}\n");
+
+    // Assert
+    assert!(names.is_empty(), "{names:?}");
+}
+
 // `#[serial]` and friends stack between the harness attribute and the function.
 #[test]
 fn names_in_a_file_whose_attributes_stack_still_finds_the_test() {
