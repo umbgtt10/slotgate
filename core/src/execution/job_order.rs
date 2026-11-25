@@ -4,6 +4,7 @@
 
 use crate::config::gate_config::GateConfig;
 use crate::execution::job::Job;
+use crate::execution::split_mix64::SplitMix64;
 use crate::traits::console::Console;
 use crate::traits::seed_source::SeedSource;
 use alloc::format;
@@ -19,23 +20,14 @@ use alloc::vec::Vec;
 // Seeded, always, and the seed is printed. An unreproducible shuffle converts a
 // reproducible failure into a rumour: the run that found the bug cannot be run
 // again, so nobody can tell a fix from a reordering. Passing the seed back
-// replays the exact sequence.
-//
-// The generator is SplitMix64 rather than a dependency. It is eleven lines, its
-// constants are published, and the alternative is taking `rand` into a tool
-// whose whole job is spawning processes. Nothing here is cryptographic; the
-// requirement is that a seed picks one permutation and picks the same one
-// twice.
+// replays the exact sequence. The numbers are `SplitMix64`'s; the walk is
+// this type's.
 pub struct JobOrder {
     seeds: Arc<dyn SeedSource>,
     console: Arc<dyn Console>,
 }
 
 impl JobOrder {
-    const GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
-    const MIX_A: u64 = 0xbf58_476d_1ce4_e5b9;
-    const MIX_B: u64 = 0x94d0_49bb_1331_11eb;
-
     pub fn new(seeds: Arc<dyn SeedSource>, console: Arc<dyn Console>) -> Self {
         Self { seeds, console }
     }
@@ -59,19 +51,10 @@ impl JobOrder {
     // and the whole list moves rather than drifting.
     pub fn shuffle(jobs: Vec<Job>, seed: u64) -> Vec<Job> {
         let mut jobs = jobs;
-        let mut state = seed;
-        for index in (1..jobs.len()).rev() {
-            state = state.wrapping_add(Self::GAMMA);
-            let swap = (Self::mix(state) % (index as u64 + 1)) as usize;
-            jobs.swap(index, swap);
+        let walk = (1..jobs.len()).rev();
+        for (index, draw) in walk.zip(SplitMix64::new(seed)) {
+            jobs.swap(index, (draw % (index as u64 + 1)) as usize);
         }
         jobs
-    }
-
-    fn mix(state: u64) -> u64 {
-        let mut mixed = state;
-        mixed = (mixed ^ (mixed >> 30)).wrapping_mul(Self::MIX_A);
-        mixed = (mixed ^ (mixed >> 27)).wrapping_mul(Self::MIX_B);
-        mixed ^ (mixed >> 31)
     }
 }

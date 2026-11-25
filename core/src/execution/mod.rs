@@ -17,4 +17,5 @@ pub mod launch_request;
 pub mod launched_job;
 pub mod outcome_line;
 pub mod run_summary;
+pub mod split_mix64;
 pub mod started_job;

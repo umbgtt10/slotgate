@@ -38,7 +38,8 @@ core:  GateRunner::run(config) -> GateVerdict
          3. JobListBuilder::build(&effective) -> Vec<Job>
               one Job per name, every {job} token substituted
          4. JobOrder::apply(jobs, &effective) -> Vec<Job>
-              shuffled only when --random, always from a seed it prints
+              shuffled only when --random, always from a seed it prints:
+              a Fisher-Yates walk over SplitMix64's draws
          5. print the plan
          6. JobExecutor::execute(jobs, print each outcome as it completes)
               JobScheduler, per job in the order handed over:
@@ -90,6 +91,7 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 | `TestNameReader` | core `config/test_name_reader.rs` | the test names one file declares |
 | `JobListBuilder` | core `config/job_list_builder.rs` | expands the names into `Job`s, substituting `{job}` |
 | `JobOrder` | core `execution/job_order.rs` | the order jobs reach the pool; shuffles when `--random`, from a printed seed |
+| `SplitMix64` | core `execution/split_mix64.rs` | the shuffle's numbers: an endless stream from one seed, held to SplitMix64's published outputs |
 | `JobScheduler` | core `execution/job_scheduler.rs` | takes the slots one job at a time in the order handed over, starts each job there, hands only the waiting to a task |
 | `JobRunner` | core `execution/job_runner.rs` | what a job is handed — its port range, its name, its log directory's name — its start, and its outcome |
 | `JobWatch` | core `execution/job_watch.rs` | a running job's ending: exited, or timed out and killed; "running 0 tests" is a failure |
