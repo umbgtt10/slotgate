@@ -22,31 +22,40 @@ mechanism itself.
 ```
 cli: main -> GateArgs (clap) -> EntryPoint::run(args)
        GateConfig::from(args)                  the paths become text
-       compose PreBuildRunner, DiskSourceTree, WallClockSeed, StdConsole and
+       compose PreBuildRunner, DiskSourceTree, TestListRunner, WallClockSeed,
+               StdConsole and
                Executor(max_parallel, PortRangeAllocator,
                         JobRunner(ProcessJobLauncher, TokioJobClock))
 core:  GateRunner::run(config) -> GateVerdict
-         1. PreBuildResolver::resolve(&config) -> GateConfig
-              no --pre-build-program: the arguments pass through untouched
-              otherwise: print the command, run it through PreBuild, and if
-              it named a test executable, swap it in as the effective program
-              with standard libtest args
+         1. PreBuildResolver::discover(&config) -> Option<test binary>
+              no --pre-build-program: nothing runs and nothing is found
+              otherwise: print the command, run it through PreBuild, and
+              print the test executable it named, if any
+            PreBuildResolver::with_test_binary(&config, found) -> GateConfig
+              a test executable found becomes the effective program, with
+              standard libtest args; without one the arguments pass through
+              untouched
          2. JobSource::apply(effective) -> GateConfig
               fills in `jobs` from whichever of --jobs, --jobs-path or
               --jobs-file was given, reading through SourceTree; stating more
               than one is an error
-         3. JobListBuilder::build(&effective) -> Vec<Job>
+         3. ScanCrossCheck::verify(found, &effective)
+              only for --jobs-path with a test executable found: the
+              executable's `--list --format terse`, through TestLister; a
+              test it lists that the scan did not find fails the run
+         4. JobListBuilder::build(&effective) -> Vec<Job>
               one Job per name, every {job} token substituted
-         4. JobOrder::apply(jobs, &effective) -> Vec<Job>
-              shuffled only when --random, always from a seed it prints
-         5. print the plan
-         6. JobExecutor::execute(jobs, print each outcome as it completes)
+         5. JobOrder::apply(jobs, &effective) -> Vec<Job>
+              shuffled only when --random, always from a seed it prints:
+              a Fisher-Yates walk over SplitMix64's draws
+         6. print the plan
+         7. JobExecutor::execute(jobs, print each outcome as it completes)
               JobScheduler, per job in the order handed over:
                 Slots::acquire_slot      -> HeldSlot (waits for a free slot)
                 PortRangeAllocator       -> PortRange for that slot index
                 JobRunner::start         -> StartedJob (the process starts)
                 TaskSpawner::spawn       -> a task: JobRunner::finish -> JobOutcome
-         7. RunSummary::from_outcomes(&outcomes); print it; its verdict
+         8. RunSummary::from_outcomes(&outcomes); print it; its verdict
 cli:   EntryPoint::exit_code(verdict) -> ExitCode
 ```
 
@@ -64,6 +73,7 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 |---|---|---|
 | `SourceTree` | whether a path exists, a file's text, every `.rs` file under a root, read | `DiskSourceTree` |
 | `PreBuild` | the test executable a one-time build produced, if any | `PreBuildRunner`, with `CompilerArtifactParser` |
+| `TestLister` | what a test binary prints when asked to list its tests | `TestListRunner` |
 | `Console` | where each line goes, stdout or stderr, as it happens | `StdConsole` |
 | `SeedSource` | a seed nobody chose | `WallClockSeed` |
 | `JobClock` | a reading, and a deadline | `TokioJobClock` |
@@ -83,13 +93,19 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 | `EntryPoint` | cli `invocation/entry_point.rs` | composes the real parts, maps the verdict to the exit code |
 | `GateConfig` | core `config/gate_config.rs` | the configuration as core reads it, its paths as text |
 | `GateRunner` | core `execution/gate_runner.rs` | wires pre-build → jobs → execution → summary, returns the verdict |
-| `PreBuildResolver` | core `config/pre_build_resolver.rs` | the arguments a run uses once the pre-build has spoken |
+| `PreBuildResolver` | core `config/pre_build_resolver.rs` | the test binary the pre-build found, and the arguments a run uses once it has spoken |
 | `JobSource` | core `config/job_source.rs` | decides where the job names come from, and refuses more than one source |
 | `TestPathScanner` | core `config/test_path_scanner.rs` | the names a tree contains, composed from the tree and the two below |
 | `ModulePath` | core `config/module_path.rs` | where a file sits, said the way Rust says it |
-| `TestNameReader` | core `config/test_name_reader.rs` | the test names one file declares |
+| `TestNameReader` | core `config/test_name_reader.rs` | the test names one file declares: from each harness attribute opening a line, past what may stand before an item, to the function's name |
+| `OuterAttribute` | core `config/rust_text/outer_attribute.rs` | one `#[...]` at the start of a text: where it ends, and whether its path ends in `test` |
+| `ItemPrelude` | core `config/rust_text/item_prelude.rs` | what may stand between an attribute and its item -- whitespace, comments, other attributes -- passed over |
+| `FunctionHeader` | core `config/rust_text/function_header.rs` | the name a function's header declares, past its visibility and qualifiers |
+| `BracketGroup`, `BlockComment`, `StringLiteral`, `Identifier` | core `config/rust_text/` | where a bracket group, a nested block comment and a string literal end, and the identifier a text opens with |
+| `ScanCrossCheck` | core `config/scan_cross_check.rs` | holds a `--jobs-path` scan to the discovered test binary's own list; a listed test the scan missed fails the run |
 | `JobListBuilder` | core `config/job_list_builder.rs` | expands the names into `Job`s, substituting `{job}` |
 | `JobOrder` | core `execution/job_order.rs` | the order jobs reach the pool; shuffles when `--random`, from a printed seed |
+| `SplitMix64` | core `execution/split_mix64.rs` | the shuffle's numbers: an endless stream from one seed, held to SplitMix64's published outputs |
 | `JobScheduler` | core `execution/job_scheduler.rs` | takes the slots one job at a time in the order handed over, starts each job there, hands only the waiting to a task |
 | `JobRunner` | core `execution/job_runner.rs` | what a job is handed — its port range, its name, its log directory's name — its start, and its outcome |
 | `JobWatch` | core `execution/job_watch.rs` | a running job's ending: exited, or timed out and killed; "running 0 tests" is a failure |
@@ -104,6 +120,7 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 | `SlotGuard` | cli `execution/slot_guard.rs` | holds a slot for a job's lifetime, releases it on drop |
 | `ProcessJobLauncher` | cli `system/process_job_launcher.rs` | the job's log directory and files, its environment, its process |
 | `ChildProcess` | cli `system/child_process.rs` | waits on, kills and reads the log of one job's process |
+| `TestListRunner` | cli `system/test_list_runner.rs` | runs a test binary to list its tests, and hands back what it printed |
 | `RustFileFinder` | cli `system/rust_file_finder.rs` | every `.rs` file under a path, in a settled order |
 
 ## Data model
@@ -173,6 +190,6 @@ reported green on a hung suite would be worse than one that reported nothing.
 
 - `docs/SLOT-ALLOCATION.md` — the slot-to-port-range mapping and its guarantee
 - `docs/ADRs/` — why slots own ranges, why pre-build discovery exists, why jobs
-  are told their own log directory, why `main` is a shim, and why the core is
-  technology-free
+  are told their own log directory, why `main` is a shim, why the core is
+  technology-free, and why the test binary checks a scan
 - `docs/ROADMAP.md` — what ships today and what comes next

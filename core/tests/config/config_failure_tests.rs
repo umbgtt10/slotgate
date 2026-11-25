@@ -26,6 +26,42 @@ fn to_string_of_a_jobs_path_that_does_not_exist_names_it() {
 }
 
 #[test]
+fn to_string_of_a_listing_that_could_not_start_names_the_binary_and_why() {
+    // Arrange
+    let failure = ConfigFailure::TestListNotSpawned {
+        binary: String::from("target/all_tests-abc"),
+        reason: String::from("not found"),
+    };
+
+    // Act
+    let text = failure.to_string();
+
+    // Assert
+    assert_eq!(
+        text,
+        "failed to spawn target/all_tests-abc to list its tests: not found"
+    );
+}
+
+#[test]
+fn to_string_of_a_listing_that_failed_names_the_binary_and_its_status() {
+    // Arrange
+    let failure = ConfigFailure::TestListFailed {
+        binary: String::from("target/all_tests-abc"),
+        status: String::from("ExitStatus(1)"),
+    };
+
+    // Act
+    let text = failure.to_string();
+
+    // Assert
+    assert_eq!(
+        text,
+        "listing the tests in target/all_tests-abc failed: ExitStatus(1)"
+    );
+}
+
+#[test]
 fn to_string_of_a_pre_build_that_could_not_start_is_labelled_as_one() {
     // Arrange & Act
     let text = ConfigFailure::PreBuildNotSpawned(String::from("not found")).to_string();
@@ -115,5 +151,27 @@ fn to_string_of_several_job_lists_names_each() {
     assert_eq!(
         text,
         "--jobs and --jobs-file were all given; state the job list once"
+    );
+}
+
+// Each test it missed on a line of its own, so a long list still reads.
+#[test]
+fn to_string_of_tests_a_scan_missed_names_each_of_them() {
+    // Arrange
+    let failure = ConfigFailure::TestsMissed {
+        binary: String::from("target/all_tests-abc"),
+        tests: vec![
+            String::from("cluster::alpha_tests::beta"),
+            String::from("cluster::gamma_tests::delta"),
+        ],
+    };
+
+    // Act
+    let text = failure.to_string();
+
+    // Assert
+    assert_eq!(
+        text,
+        "--jobs-path did not find 2 of the tests target/all_tests-abc lists, so they would never run:\n  cluster::alpha_tests::beta\n  cluster::gamma_tests::delta"
     );
 }

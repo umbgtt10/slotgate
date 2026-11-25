@@ -14,3 +14,4 @@ pub mod scripted_job_executor;
 pub mod scripted_job_launcher;
 pub mod scripted_pre_build;
 pub mod scripted_running_job;
+pub mod scripted_test_lister;

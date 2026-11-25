@@ -9,5 +9,6 @@ pub mod pre_build_runner_tests;
 pub mod process_job_launcher_tests;
 pub mod rust_file_finder_tests;
 pub mod std_console_tests;
+pub mod test_list_runner_tests;
 pub mod tokio_job_clock_tests;
 pub mod wall_clock_seed_tests;

@@ -9,5 +9,6 @@ pub mod pre_build_runner;
 pub mod process_job_launcher;
 pub mod rust_file_finder;
 pub mod std_console;
+pub mod test_list_runner;
 pub mod tokio_job_clock;
 pub mod wall_clock_seed;

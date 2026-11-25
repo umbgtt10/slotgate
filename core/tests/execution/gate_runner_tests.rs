@@ -2,9 +2,9 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
-// A whole run with nothing real in it: the pre-build, the tree, the seed, the
-// executor and the console are all scripted, so a run's every line and its
-// verdict are asserted exactly. End to end against real processes is the
+// A whole run with nothing real in it: the pre-build, the tree, the binary's
+// list of its tests, the seed, the executor and the console are all scripted,
+// so a run's every line and its verdict are asserted exactly. End to end against real processes is the
 // command line's (`cli/tests/invocation/entry_point_tests.rs`).
 
 use crate::support::blocking::Blocking;
@@ -17,6 +17,7 @@ use crate::support::reversing_task_spawner::ReversingTaskSpawner;
 use crate::support::scripted_job_executor::ScriptedJobExecutor;
 use crate::support::scripted_job_launcher::ScriptedJobLauncher;
 use crate::support::scripted_pre_build::ScriptedPreBuild;
+use crate::support::scripted_test_lister::ScriptedTestLister;
 use slotgate::config::config_failure::ConfigFailure;
 use slotgate::config::gate_config::GateConfig;
 use slotgate::execution::gate_runner::GateRunner;
@@ -41,8 +42,38 @@ fn args_running(jobs: &[&str]) -> GateConfig {
     }
 }
 
+fn args_scanning() -> GateConfig {
+    GateConfig {
+        pre_build_program: Some(String::from("cargo")),
+        pre_build_target_name: Some(String::from("all_tests")),
+        jobs_paths: vec![String::from("tests")],
+        ..args_running(&[])
+    }
+}
+
 fn gate(executor: &Arc<ScriptedJobExecutor>, console: &Arc<RecordingConsole>) -> GateRunner {
     gate_with(Ok(None), executor, console)
+}
+
+// A run whose pre-build finds its binary, whose tree holds one test, and whose
+// binary lists what it is scripted to.
+fn gate_listing(
+    listed: &str,
+    executor: &Arc<ScriptedJobExecutor>,
+    console: &Arc<RecordingConsole>,
+) -> GateRunner {
+    GateRunner::new(
+        Arc::new(ScriptedPreBuild::new(Ok(Some(String::from(
+            "target/all_tests-abc",
+        ))))),
+        Arc::new(
+            InMemorySourceTree::new().with_file("tests/alpha_tests.rs", "#[test]\nfn alpha() {}\n"),
+        ),
+        Arc::new(ScriptedTestLister::new(Ok(String::from(listed)))),
+        Arc::new(FakeSeedSource::new(4242)),
+        executor.clone(),
+        console.clone(),
+    )
 }
 
 fn gate_with(
@@ -53,6 +84,7 @@ fn gate_with(
     GateRunner::new(
         Arc::new(ScriptedPreBuild::new(discovered)),
         Arc::new(InMemorySourceTree::new()),
+        Arc::new(ScriptedTestLister::new(Ok(String::new()))),
         Arc::new(FakeSeedSource::new(4242)),
         executor.clone(),
         console.clone(),
@@ -152,6 +184,51 @@ fn run_of_a_gate_whose_pre_build_discovers_a_binary_runs_the_jobs_against_it() {
     );
 }
 
+#[test]
+fn run_of_a_gate_whose_scan_finds_every_test_its_binary_lists_runs_them() {
+    // Arrange
+    let executor = Arc::new(ScriptedJobExecutor::new(JobStatus::Passed));
+    let console = Arc::new(RecordingConsole::new());
+    let gate = gate_listing("alpha_tests::alpha: test\n", &executor, &console);
+
+    // Act
+    let verdict = Blocking::on(gate.run(args_scanning()));
+
+    // Assert
+    assert_eq!(verdict, GateVerdict::Passed);
+    assert_eq!(
+        executor.received(),
+        ["target/all_tests-abc alpha_tests::alpha --exact --test-threads=1"]
+    );
+}
+
+// A test the scan missed would never run while the gate passed. The binary
+// lists it, so the run names it on stderr, runs nothing and fails.
+#[test]
+fn run_of_a_gate_whose_scan_misses_a_test_its_binary_lists_names_it_and_returns_failed() {
+    // Arrange
+    let executor = Arc::new(ScriptedJobExecutor::new(JobStatus::Passed));
+    let console = Arc::new(RecordingConsole::new());
+    let gate = gate_listing(
+        "alpha_tests::alpha: test\nalpha_tests::beta: test\n",
+        &executor,
+        &console,
+    );
+
+    // Act
+    let verdict = Blocking::on(gate.run(args_scanning()));
+
+    // Assert
+    assert_eq!(verdict, GateVerdict::Failed);
+    assert_eq!(
+        console.lines().last().map(String::as_str),
+        Some(
+            "stderr: SLOTGATE — --jobs-path did not find 1 of the tests target/all_tests-abc lists, so they would never run:\n  alpha_tests::beta"
+        )
+    );
+    assert!(executor.received().is_empty(), "{:?}", executor.received());
+}
+
 // A run that cannot work out its job list says why on stderr, runs nothing and
 // fails.
 #[test]
@@ -221,6 +298,7 @@ fn run_of_a_gate_with_random_starts_the_jobs_in_the_seeded_order() {
     let gate = GateRunner::new(
         Arc::new(ScriptedPreBuild::new(Ok(None))),
         Arc::new(InMemorySourceTree::new()),
+        Arc::new(ScriptedTestLister::new(Ok(String::new()))),
         Arc::new(FakeSeedSource::new(4242)),
         Arc::new(scheduler),
         Arc::new(RecordingConsole::new()),

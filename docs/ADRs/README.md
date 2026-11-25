@@ -14,6 +14,7 @@ enough decision surface that a flat list is sufficient.
 | [ADR-JobsOwnTheirLogDirectory](ADR-JobsOwnTheirLogDirectory.md) | Each job is told its own log directory and unsanitised name through the environment, rather than being left to reconstruct the path from its name. |
 | [ADR-EntryPointIsAShim](ADR-EntryPointIsAShim.md) | `main` parses arguments and delegates; all orchestration lives in the library, because a binary entry point cannot be reached from an integration test. |
 | [ADR-TechnologyFreeCore](ADR-TechnologyFreeCore.md) | Every decision lives in `slotgate-core`, `no_std` and depending on nothing, with technology behind traits that the `slotgate` crate implements, so mutation testing needs nothing but the core's own tests. |
+| [ADR-TheTestBinaryChecksTheScan](ADR-TheTestBinaryChecksTheScan.md) | When the pre-build has found the test binary, a `--jobs-path` scan is held to the binary's own `--list`: a test it lists that the scan missed fails the run, because a test never run must never read as passed. |
 
 ## Template
 

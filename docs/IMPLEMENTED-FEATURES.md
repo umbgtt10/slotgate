@@ -4,7 +4,32 @@ This document describes the feature set currently shipped by `slotgate`. For
 the mechanism behind it see [SLOT-ALLOCATION.md](SLOT-ALLOCATION.md); for
 released versions see [CHANGELOG.md](../CHANGELOG.md).
 
-## Unreleased
+## Version 0.8.0
+
+### Job list
+
+- `--jobs-path` reads a test whatever stands between its harness attribute and
+  the function -- comments of every kind, other attributes -- with the function
+  on the attribute's line or after a trailing comment, behind a restricted
+  visibility or the qualifiers `unsafe`, `const`, `async` and `extern`, and
+  under an attribute with arguments or spaces, `#[tokio::test(flavor = ...)]`
+  and `#[ test ]` among them
+- With pre-build discovery a `--jobs-path` scan is held to the test binary's
+  own `--list --format terse`: a test the binary lists that the scan did not
+  find fails the run, named, before a job starts. A list stated with `--jobs`
+  or `--jobs-file` is not checked
+
+### Job order
+
+- The shuffle's generator, `SplitMix64`, is a type of its own, tested against
+  SplitMix64's published outputs; the permutation a seed gives is unchanged
+
+### Quality gates
+
+- Stage 2 ends with `cargo deny`, and stage 1 opens with `just sync`
+- Every commit message carries core's grip and braintax, scored as staged
+
+## Version 0.7.0
 
 ### Packaging
 

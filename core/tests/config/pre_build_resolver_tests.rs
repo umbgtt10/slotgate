@@ -47,6 +47,38 @@ fn resolver_answering(answer: Result<Option<String>, ConfigFailure>) -> PreBuild
     )
 }
 
+#[test]
+fn discover_of_a_pre_build_that_finds_a_binary_returns_it() {
+    // Arrange
+    let resolver = resolver_answering(Ok(Some(String::from("target/all_tests-abc"))));
+
+    // Act
+    let discovered = Blocking::on(resolver.discover(&args_with_pre_build(Some("all_tests"))));
+
+    // Assert
+    assert_eq!(discovered, Ok(Some(String::from("target/all_tests-abc"))));
+}
+
+// Without a pre-build program nothing runs, so nothing is found and nothing is
+// said.
+#[test]
+fn discover_without_a_pre_build_program_runs_nothing_and_finds_nothing() {
+    // Arrange
+    let pre_build = Arc::new(ScriptedPreBuild::new(Ok(Some(String::from(
+        "target/all_tests-abc",
+    )))));
+    let console = Arc::new(RecordingConsole::new());
+    let resolver = PreBuildResolver::new(pre_build.clone(), console.clone());
+
+    // Act
+    let discovered = Blocking::on(resolver.discover(&args_without_pre_build()));
+
+    // Assert
+    assert_eq!(discovered, Ok(None));
+    assert!(pre_build.asked().is_empty(), "{:?}", pre_build.asked());
+    assert!(console.lines().is_empty(), "{:?}", console.lines());
+}
+
 // The command it runs is the one configured, asked for the configured target.
 #[test]
 fn resolve_pre_build_asks_the_pre_build_for_the_configured_target() {
@@ -185,4 +217,33 @@ fn resolve_pre_build_without_a_pre_build_program_returns_the_arguments_unchanged
     // Assert
     assert_eq!(resolved.program, args.program);
     assert_eq!(resolved.program_args, args.program_args);
+}
+
+#[test]
+fn with_test_binary_given_a_binary_runs_it_with_libtest_arguments() {
+    // Arrange & Act
+    let config = PreBuildResolver::with_test_binary(
+        &args_with_pre_build(Some("all_tests")),
+        Some(String::from("target/all_tests-abc")),
+    );
+
+    // Assert
+    assert_eq!(config.program, "target/all_tests-abc");
+    assert_eq!(
+        config.program_args,
+        ["{job}", "--exact", "--test-threads=1"]
+    );
+}
+
+#[test]
+fn with_test_binary_given_none_returns_the_arguments_unchanged() {
+    // Arrange
+    let args = args_with_pre_build(Some("all_tests"));
+
+    // Act
+    let config = PreBuildResolver::with_test_binary(&args, None);
+
+    // Assert
+    assert_eq!(config.program, args.program);
+    assert_eq!(config.program_args, args.program_args);
 }
