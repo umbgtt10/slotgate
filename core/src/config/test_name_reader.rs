@@ -13,9 +13,10 @@ use core::iter::once;
 //
 // Read rather than parsed. A parser would mean taking `syn` into a tool whose
 // job is spawning processes, and it would buy less than it looks: the
-// authority on which tests exist is the compiled binary, not this reading, and
-// `JobWatch` fails any job that turns out to match nothing. This only has to be
-// right about the shapes people write.
+// authority on which tests exist is the compiled binary, not this reading.
+// `ScanCrossCheck` holds a scan to the binary's own list whenever the pre-build
+// found it, and `JobWatch` fails any job that turns out to match nothing. This
+// only has to be right about the shapes people write.
 //
 // A harness attribute is any attribute path ending in `test` -- `#[test]` and
 // `#[tokio::test]` alike -- opening a line, and the name is that of the

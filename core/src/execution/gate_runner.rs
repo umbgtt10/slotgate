@@ -7,6 +7,7 @@ use crate::config::gate_config::GateConfig;
 use crate::config::job_list_builder::JobListBuilder;
 use crate::config::job_source::JobSource;
 use crate::config::pre_build_resolver::PreBuildResolver;
+use crate::config::scan_cross_check::ScanCrossCheck;
 use crate::execution::gate_verdict::GateVerdict;
 use crate::execution::job_order::JobOrder;
 use crate::execution::job_outcome::JobOutcome;
@@ -17,15 +18,18 @@ use crate::traits::job_executor::JobExecutor;
 use crate::traits::pre_build::PreBuild;
 use crate::traits::seed_source::SeedSource;
 use crate::traits::source_tree::SourceTree;
+use crate::traits::test_lister::TestLister;
 use alloc::format;
 use alloc::sync::Arc;
 
-// A whole run: the arguments it really uses, the jobs in the order they go, the
-// plan, every outcome as it lands, the summary and the verdict. Built from the
-// ports alone; the parts that decide are composed here, once.
+// A whole run: the arguments it really uses, its job list held to the test
+// binary when it was scanned for, the jobs in the order they go, the plan,
+// every outcome as it lands, the summary and the verdict. Built from the ports
+// alone; the parts that decide are composed here, once.
 pub struct GateRunner {
     resolver: PreBuildResolver,
     source: JobSource,
+    check: ScanCrossCheck,
     order: JobOrder,
     executor: Arc<dyn JobExecutor>,
     console: Arc<dyn Console>,
@@ -35,6 +39,7 @@ impl GateRunner {
     pub fn new(
         pre_build: Arc<dyn PreBuild>,
         tree: Arc<dyn SourceTree>,
+        lister: Arc<dyn TestLister>,
         seeds: Arc<dyn SeedSource>,
         executor: Arc<dyn JobExecutor>,
         console: Arc<dyn Console>,
@@ -42,6 +47,7 @@ impl GateRunner {
         Self {
             resolver: PreBuildResolver::new(pre_build, Arc::clone(&console)),
             source: JobSource::new(tree),
+            check: ScanCrossCheck::new(lister),
             order: JobOrder::new(seeds, Arc::clone(&console)),
             executor,
             console,
@@ -91,14 +97,19 @@ impl GateRunner {
         self.console.print_line("");
     }
 
-    // Both steps work out the args a run should use and both fail the same
-    // way, so they share one exit rather than repeating it. The pre-build
+    // Every step works out the args a run should use and every one fails the
+    // same way, so they share one exit rather than repeating it. The pre-build
     // error is labelled where it is raised instead of where it is printed,
-    // which is what lets the two join.
+    // which is what lets them join.
     async fn resolve(&self, args: &GateConfig) -> Result<GateConfig, ConfigFailure> {
-        self.resolver
-            .resolve(args)
-            .await
-            .and_then(|resolved| self.source.apply(resolved))
+        let test_binary = self.resolver.discover(args).await?;
+        let effective = self.source.apply(PreBuildResolver::with_test_binary(
+            args,
+            test_binary.clone(),
+        ))?;
+        self.check
+            .verify(test_binary.as_deref(), &effective)
+            .await?;
+        Ok(effective)
     }
 }

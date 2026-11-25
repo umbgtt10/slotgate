@@ -8,6 +8,7 @@ use crate::system::disk_source_tree::DiskSourceTree;
 use crate::system::pre_build_runner::PreBuildRunner;
 use crate::system::process_job_launcher::ProcessJobLauncher;
 use crate::system::std_console::StdConsole;
+use crate::system::test_list_runner::TestListRunner;
 use crate::system::tokio_job_clock::TokioJobClock;
 use crate::system::wall_clock_seed::WallClockSeed;
 use slotgate::config::gate_config::GateConfig;
@@ -38,6 +39,7 @@ impl EntryPoint {
         let gate = GateRunner::new(
             Arc::new(PreBuildRunner),
             Arc::new(DiskSourceTree),
+            Arc::new(TestListRunner),
             Arc::new(WallClockSeed),
             Arc::new(Self::executor_for(&config)),
             Arc::new(StdConsole),

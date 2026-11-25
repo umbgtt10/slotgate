@@ -52,9 +52,12 @@ recompile.
 
 There is cargo-specific knowledge in the codebase: `CompilerArtifactParser`, in
 the `slotgate` crate beside the pre-build's process, understands `reason`,
-`profile.test` and `target.name`, and the core's `PreBuildResolver` knows the
-three libtest arguments to substitute. Both are confined to that one optional
-path — nothing on the default path mentions cargo.
+`profile.test` and `target.name`; the core's `PreBuildResolver` knows the three
+libtest arguments to substitute, and its `ScanCrossCheck` the three that make
+the binary list its tests
+([ADR-TheTestBinaryChecksTheScan](ADR-TheTestBinaryChecksTheScan.md)). All of it
+is confined to that one optional path — nothing on the default path mentions
+cargo.
 
 `--program` remains required by the CLI even when discovery will override it,
 so a caller using discovery must pass a placeholder. That is a wart, recorded
@@ -74,3 +77,4 @@ untouched, so the default path cannot start rewriting the caller's command.
 
 - `docs/ARCHITECTURE.md`
 - [ADR-JobsOwnTheirLogDirectory](ADR-JobsOwnTheirLogDirectory.md)
+- [ADR-TheTestBinaryChecksTheScan](ADR-TheTestBinaryChecksTheScan.md)

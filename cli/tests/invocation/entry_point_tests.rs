@@ -2,11 +2,13 @@
 // Licensed under the MIT License
 // SPDX-License-Identifier: MIT
 
+use serde_json::json;
 use slotgate::execution::gate_verdict::GateVerdict;
 use slotgate::execution::job::Job;
 use slotgate::execution::job_order::JobOrder;
 use slotgate_cli::invocation::entry_point::EntryPoint;
 use slotgate_cli::invocation::gate_args::GateArgs;
+use std::env::current_exe;
 use std::env::temp_dir;
 use std::fs;
 use std::path::Path;
@@ -65,6 +67,25 @@ fn args_without_pre_build() -> GateArgs {
         jobs: vec![String::from("alpha"), String::from("beta")],
         ..Default::default()
     }
+}
+
+// Printing a file is the one script the two shells cannot share: `cmd.exe`
+// takes the command and its argument apart, `sh` one script string.
+#[cfg(windows)]
+fn print_file_args(path: &Path) -> Vec<String> {
+    vec![
+        String::from(SHELL_FLAG),
+        String::from("type"),
+        path.display().to_string(),
+    ]
+}
+
+#[cfg(not(windows))]
+fn print_file_args(path: &Path) -> Vec<String> {
+    vec![
+        String::from(SHELL_FLAG),
+        format!("cat '{}'", path.display()),
+    ]
 }
 
 fn seeded_order(names: &[String], seed: u64) -> Vec<String> {
@@ -136,6 +157,52 @@ async fn run_a_gate_whose_jobs_all_pass_returns_success() {
         shows_as(code, ExitCode::SUCCESS),
         "every job passed, so the gate must succeed"
     );
+}
+
+// The check end to end: a pre-build that names this very test binary, as cargo
+// would, and a tree whose one test the binary does not hold. The binary lists
+// its own tests, the scan found none of them, so the run fails before a single
+// job starts -- nothing is written under its log directory.
+#[tokio::test]
+async fn run_a_gate_whose_scan_misses_tests_its_discovered_binary_lists_returns_failure() {
+    // Arrange
+    let tree = temp_dir().join("slotgate_entry_point_scan_misses");
+    let _ = fs::remove_dir_all(&tree);
+    fs::create_dir_all(&tree).expect("create the tree");
+    fs::write(tree.join("alpha_tests.rs"), "#[test]\nfn alpha() {}\n").expect("write a test");
+    let artifact = temp_dir().join("slotgate_entry_point_scan_misses_artifact.json");
+    let binary = current_exe().expect("the test binary's path");
+    fs::write(
+        &artifact,
+        json!({
+            "reason": "compiler-artifact",
+            "target": { "name": "all_tests" },
+            "profile": { "test": true },
+            "executable": binary.display().to_string(),
+        })
+        .to_string(),
+    )
+    .expect("write the artifact");
+    let log_dir = temp_log_dir("scan_misses");
+    let args = GateArgs {
+        pre_build_program: Some(String::from(SHELL)),
+        pre_build_args: print_file_args(&artifact),
+        pre_build_target_name: Some(String::from("all_tests")),
+        jobs: Vec::new(),
+        jobs_paths: vec![tree],
+        log_dir: log_dir.clone(),
+        ..args_without_pre_build()
+    };
+
+    // Act
+    let code = EntryPoint.run(args).await;
+
+    // Assert
+    assert!(
+        shows_as(code, ExitCode::FAILURE),
+        "a scan missing tests the binary lists must fail the gate"
+    );
+    assert!(!log_dir.exists(), "no job may start");
 }
 
 // The property the gate exists for: one failing job fails the run, however many

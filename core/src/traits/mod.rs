@@ -13,3 +13,4 @@ pub mod seed_source;
 pub mod slots;
 pub mod source_tree;
 pub mod task_spawner;
+pub mod test_lister;

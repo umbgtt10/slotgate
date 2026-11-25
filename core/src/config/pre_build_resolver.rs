@@ -28,11 +28,12 @@ impl PreBuildResolver {
         Self { pre_build, console }
     }
 
-    /// Without a pre-build program the arguments pass through untouched.
-    /// With one, a discovered test binary replaces `program`/`program_args`.
-    pub async fn resolve(&self, args: &GateConfig) -> Result<GateConfig, ConfigFailure> {
+    // The test executable the pre-build step built, if it ran and named one.
+    // The command is said before the build starts, so a long build is not a
+    // silent one, and the binary it found is named once it is done.
+    pub async fn discover(&self, args: &GateConfig) -> Result<Option<String>, ConfigFailure> {
         let Some(pre_build_program) = &args.pre_build_program else {
-            return Ok(args.clone());
+            return Ok(None);
         };
 
         self.console.print_line(&format!(
@@ -49,19 +50,29 @@ impl PreBuildResolver {
             .await?;
         self.console.print_line("");
 
-        let Some(executable) = discovered else {
-            return Ok(args.clone());
-        };
-
-        self.console.print_line(&format!(
-            "SLOTGATE — PRE-BUILD discovered test binary: {executable}"
-        ));
-        self.console.print_line("");
-
-        Ok(Self::with_discovered_binary(args, executable))
+        if let Some(executable) = &discovered {
+            self.console.print_line(&format!(
+                "SLOTGATE — PRE-BUILD discovered test binary: {executable}"
+            ));
+            self.console.print_line("");
+        }
+        Ok(discovered)
     }
 
-    fn with_discovered_binary(args: &GateConfig, executable: String) -> GateConfig {
+    /// Without a pre-build program the arguments pass through untouched.
+    /// With one, a discovered test binary replaces `program`/`program_args`.
+    pub async fn resolve(&self, args: &GateConfig) -> Result<GateConfig, ConfigFailure> {
+        let discovered = self.discover(args).await?;
+        Ok(Self::with_test_binary(args, discovered))
+    }
+
+    // The arguments a run uses once the pre-build has spoken: as they were
+    // without a binary, and with one, that binary every job's program, run one
+    // exact test at a time.
+    pub fn with_test_binary(args: &GateConfig, test_binary: Option<String>) -> GateConfig {
+        let Some(executable) = test_binary else {
+            return args.clone();
+        };
         GateConfig {
             program: executable,
             program_args: LIBTEST_ARGS_FOR_DISCOVERED_BINARY
