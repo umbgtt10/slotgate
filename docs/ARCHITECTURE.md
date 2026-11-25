@@ -88,7 +88,11 @@ implemented in cli and, for core's own tests, by fakes in `core/tests/support/`:
 | `JobSource` | core `config/job_source.rs` | decides where the job names come from, and refuses more than one source |
 | `TestPathScanner` | core `config/test_path_scanner.rs` | the names a tree contains, composed from the tree and the two below |
 | `ModulePath` | core `config/module_path.rs` | where a file sits, said the way Rust says it |
-| `TestNameReader` | core `config/test_name_reader.rs` | the test names one file declares |
+| `TestNameReader` | core `config/test_name_reader.rs` | the test names one file declares: from each harness attribute opening a line, past what may stand before an item, to the function's name |
+| `OuterAttribute` | core `config/rust_text/outer_attribute.rs` | one `#[...]` at the start of a text: where it ends, and whether its path ends in `test` |
+| `ItemPrelude` | core `config/rust_text/item_prelude.rs` | what may stand between an attribute and its item -- whitespace, comments, other attributes -- passed over |
+| `FunctionHeader` | core `config/rust_text/function_header.rs` | the name a function's header declares, past its visibility and qualifiers |
+| `BracketGroup`, `BlockComment`, `StringLiteral`, `Identifier` | core `config/rust_text/` | where a bracket group, a nested block comment and a string literal end, and the identifier a text opens with |
 | `JobListBuilder` | core `config/job_list_builder.rs` | expands the names into `Job`s, substituting `{job}` |
 | `JobOrder` | core `execution/job_order.rs` | the order jobs reach the pool; shuffles when `--random`, from a printed seed |
 | `SplitMix64` | core `execution/split_mix64.rs` | the shuffle's numbers: an endless stream from one seed, held to SplitMix64's published outputs |

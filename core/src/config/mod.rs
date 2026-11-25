@@ -10,5 +10,6 @@ pub mod module_path;
 pub mod pre_build_resolver;
 pub mod read_failure;
 pub mod rust_file;
+pub mod rust_text;
 pub mod test_name_reader;
 pub mod test_path_scanner;

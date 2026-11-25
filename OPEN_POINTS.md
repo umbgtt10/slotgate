@@ -80,3 +80,27 @@ configured — which clap supports but which adds a second way to be
 misconfigured.
 
 Not started; low cost either way, listed so the awkwardness is on the record.
+
+## One shared "is this test code?" check
+
+Deferred by the owner on 2026-11-25.
+
+Which code is test code is decided separately, and not quite alike, by
+crap4rust, grip4rust, braintax4rust, iceberg4rust and slotgate -- the same
+defect five times. slotgate's part is `TestNameReader`: an attribute opening a
+line is a harness when its path ends in `test`, and nothing else about the item
+is asked. Since 0.8.0 the shapes around that attribute are read -- comments, a
+trailing comment, the function on the same line, a visibility or qualifiers
+before `fn`, and the path read before the attribute's arguments, so
+`#[tokio::test(flavor = "multi_thread")]` is one -- but the rule for which
+attributes count is unchanged.
+
+The check is to be written once, with shared test vectors, and adopted by every
+tool:
+
+- an attribute is a harness when its path ends in `test`
+- `cfg(P)` makes an item test-only when P is `test`; `all(..)` when any of its
+  parts is test-only; `any(..)` when every one of its parts is; `not(..)` never
+- `cfg_attr` never makes an item test-only
+
+Not started.
